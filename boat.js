@@ -5,8 +5,8 @@ class Boat {
     this.y = y;
     this.angle = 0;
     this.speed = 0;
-    this.maxSpeed = 36; // Doubled from 18 to 36 (2x faster)
-    this.acceleration = 1.2; // Doubled acceleration to match
+    this.maxSpeed = 72; // Doubled from 18 to 36 (2x faster)
+    this.acceleration = 2.4; // Doubled acceleration to match
     this.friction = 0.95;
     this.turnSpeed = 0.12; // Adjusted for smoother turning
     

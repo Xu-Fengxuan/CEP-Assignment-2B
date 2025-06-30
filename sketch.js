@@ -77,25 +77,43 @@ function updateCamera() {
 }
 
 function checkWorldExpansion() {
-  // Check if boat is near the edge of generated content
-  let boatGridX = floor(boat.x / gridSize);
-  let boatGridY = floor(boat.y / gridSize);
+  // Check if boat is near the edge of generated content more frequently
+  // since we're now generating smaller areas
+  let bufferZone = 300;
+  let checkDistance = 150; // Check when boat is 150px from buffer edge
   
-  // Expand world if boat is approaching ungenerated areas
+  // Calculate bounds of what should be generated
+  let leftBound = cameraX - bufferZone;
+  let rightBound = cameraX + width + bufferZone;
+  let topBound = cameraY - bufferZone;
+  let bottomBound = cameraY + height + bufferZone;
+  
+  // Check if boat is approaching the edges of the generated area
   let needsExpansion = false;
-  let checkRadius = 10;
   
-  for (let dx = -checkRadius; dx <= checkRadius; dx++) {
-    for (let dy = -checkRadius; dy <= checkRadius; dy++) {
-      let checkX = (boatGridX + dx) * gridSize;
-      let checkY = (boatGridY + dy) * gridSize;
-      
-      if (!isRegionGenerated(checkX, checkY)) {
-        needsExpansion = true;
-        break;
+  if (boat.x < leftBound + checkDistance || 
+      boat.x > rightBound - checkDistance ||
+      boat.y < topBound + checkDistance || 
+      boat.y > bottomBound - checkDistance) {
+    needsExpansion = true;
+  }
+  
+  // Also check for any ungenerated regions in the visible area
+  if (!needsExpansion) {
+    let visibleStartX = floor(cameraX / gridSize);
+    let visibleEndX = floor((cameraX + width) / gridSize);
+    let visibleStartY = floor(cameraY / gridSize);
+    let visibleEndY = floor((cameraY + height) / gridSize);
+    
+    for (let gx = visibleStartX; gx <= visibleEndX && !needsExpansion; gx++) {
+      for (let gy = visibleStartY; gy <= visibleEndY && !needsExpansion; gy++) {
+        let worldX = gx * gridSize;
+        let worldY = gy * gridSize;
+        if (!isRegionGenerated(worldX, worldY)) {
+          needsExpansion = true;
+        }
       }
     }
-    if (needsExpansion) break;
   }
   
   if (needsExpansion) {
@@ -378,15 +396,25 @@ function generateInitialWorld() {
 }
 
 function expandWorld() {
-  // Generate new content at world edges using grid-based WFC
-  let boatGridX = floor(boat.x / gridSize);
-  let boatGridY = floor(boat.y / gridSize);
+  // Generate new content only in visible screen area + 300px buffer
+  let bufferZone = 300;
   
-  let expandRadius = 15;
+  // Calculate visible area bounds with buffer
+  let leftBound = cameraX - bufferZone;
+  let rightBound = cameraX + width + bufferZone;
+  let topBound = cameraY - bufferZone;
+  let bottomBound = cameraY + height + bufferZone;
+  
+  // Convert to grid coordinates
+  let startGridX = floor(leftBound / gridSize);
+  let endGridX = floor(rightBound / gridSize);
+  let startGridY = floor(topBound / gridSize);
+  let endGridY = floor(bottomBound / gridSize);
+  
   let generatedCount = 0;
   
-  for (let gx = boatGridX - expandRadius; gx <= boatGridX + expandRadius; gx++) {
-    for (let gy = boatGridY - expandRadius; gy <= boatGridY + expandRadius; gy++) {
+  for (let gx = startGridX; gx <= endGridX; gx++) {
+    for (let gy = startGridY; gy <= endGridY; gy++) {
       let worldX = gx * gridSize;
       let worldY = gy * gridSize;
       
