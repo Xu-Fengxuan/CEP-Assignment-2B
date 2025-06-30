@@ -5,10 +5,10 @@ class Boat {
     this.y = y;
     this.angle = 0;
     this.speed = 0;
-    this.maxSpeed = 3;
-    this.acceleration = 0.1;
+    this.maxSpeed = 36; // Doubled from 18 to 36 (2x faster)
+    this.acceleration = 1.2; // Doubled acceleration to match
     this.friction = 0.95;
-    this.turnSpeed = 0.08;
+    this.turnSpeed = 0.12; // Adjusted for smoother turning
     
     // Movement flags
     this.keys = {
@@ -36,7 +36,7 @@ class Boat {
       moveY -= this.acceleration;
     }
     if (this.keys.backward) {
-      moveY += this.acceleration * 0.5;
+      moveY += this.acceleration; // Fixed: removed 0.5 multiplier
     }
     if (this.keys.left) {
       moveX -= this.acceleration;
@@ -173,40 +173,6 @@ class Boat {
         this.y = rock.y + sin(pushAngle) * ((rock.size / 2) + (this.size / 2) + 2);
         this.speed *= 0.3; // More penalty for hitting rocks
       }
-    }
-  }
-  
-  handleKeyPressed(key) {
-    switch(key.toLowerCase()) {
-      case 'w':
-        this.keys.forward = true;
-        break;
-      case 's':
-        this.keys.backward = true;
-        break;
-      case 'a':
-        this.keys.left = true;
-        break;
-      case 'd':
-        this.keys.right = true;
-        break;
-    }
-  }
-  
-  handleKeyReleased(key) {
-    switch(key.toLowerCase()) {
-      case 'w':
-        this.keys.forward = false;
-        break;
-      case 's':
-        this.keys.backward = false;
-        break;
-      case 'a':
-        this.keys.left = false;
-        break;
-      case 'd':
-        this.keys.right = false;
-        break;
     }
   }
 }
