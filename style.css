@@ -1,7 +1,22 @@
 html, body {
   margin: 0;
   padding: 0;
+  background-color: #1e5a8a;
+  font-family: 'Arial', sans-serif;
+  overflow: hidden;
 }
+
 canvas {
   display: block;
+  margin: 0 auto;
+  border: 2px solid #0f3a5f;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e5a8a 0%, #2980b9 50%, #3498db 100%);
 }
