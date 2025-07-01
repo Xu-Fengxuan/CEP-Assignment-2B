@@ -178,8 +178,15 @@ class WaveFunctionCollapse {
         selectedTile = possibleTiles[Math.floor(Math.random() * possibleTiles.length)];
       }
 
-      this.grid[chosen.y][chosen.x] = selectedTile;
-      this.propagate(chosen.x, chosen.y);
+      // Validate selected tile before setting it
+      if (selectedTile !== undefined && TILE_RULES[selectedTile]) {
+        this.grid[chosen.y][chosen.x] = selectedTile;
+        this.propagate(chosen.x, chosen.y);
+      } else {
+        // Fallback to water if selected tile is invalid
+        this.grid[chosen.y][chosen.x] = TILES.WATER;
+        this.propagate(chosen.x, chosen.y);
+      }
     }
 
     // Fill any remaining uncollapsed cells with water
@@ -200,6 +207,12 @@ class WaveFunctionCollapse {
     while (stack.length > 0) {
       const {x, y} = stack.pop();
       const currentTile = this.grid[y][x];
+      
+      // Skip if currentTile is invalid
+      if (currentTile === undefined || currentTile === -1 || !TILE_RULES[currentTile]) {
+        console.warn(`Invalid currentTile at (${x}, ${y}):`, currentTile);
+        continue;
+      }
 
       // Check all neighbors
       const neighbors = [
@@ -214,14 +227,17 @@ class WaveFunctionCollapse {
             neighbor.y >= 0 && neighbor.y < this.height &&
             this.grid[neighbor.y][neighbor.x] === -1) {
           
-          const validTiles = TILE_RULES[currentTile][neighbor.dir];
-          const oldPossibilities = [...this.possibilities[neighbor.y][neighbor.x]];
-          
-          this.possibilities[neighbor.y][neighbor.x] = 
-            this.possibilities[neighbor.y][neighbor.x].filter(tile => validTiles.includes(tile));
+          // Check if currentTile and its rules exist
+          if (currentTile !== undefined && TILE_RULES[currentTile] && TILE_RULES[currentTile][neighbor.dir]) {
+            const validTiles = TILE_RULES[currentTile][neighbor.dir];
+            const oldPossibilities = [...this.possibilities[neighbor.y][neighbor.x]];
+            
+            this.possibilities[neighbor.y][neighbor.x] = 
+              this.possibilities[neighbor.y][neighbor.x].filter(tile => validTiles.includes(tile));
 
-          if (this.possibilities[neighbor.y][neighbor.x].length !== oldPossibilities.length) {
-            stack.push({x: neighbor.x, y: neighbor.y});
+            if (this.possibilities[neighbor.y][neighbor.x].length !== oldPossibilities.length) {
+              stack.push({x: neighbor.x, y: neighbor.y});
+            }
           }
         }
       }
@@ -573,11 +589,29 @@ function drawMap() {
 function getTileFromSheet(index) {
   if (!spriteSheet) return null;
   
-  const tilesPerRow = 20; // Corrected: 640px ÷ 32px = 20 tiles per row
+  const tilesPerRow = 20; // 640px ÷ 32px = 20 tiles per row
+  const totalRows = 9;    // 288px ÷ 32px = 9 rows
+  const maxTileIndex = tilesPerRow * totalRows - 1; // 179
   const tilePixelSize = 32; // Each tile is 32x32 pixels
+  
+  // Bounds check
+  if (index < 0 || index > maxTileIndex) {
+    console.warn(`Tile index ${index} is out of bounds (0-${maxTileIndex}). Using water tile instead.`);
+    index = 170; // Fallback to water tile index
+    
+    // If even the fallback is out of bounds, use index 0
+    if (index > maxTileIndex) {
+      index = 0;
+    }
+  }
   
   const tileX = (index % tilesPerRow) * tilePixelSize;
   const tileY = Math.floor(index / tilesPerRow) * tilePixelSize;
+  
+  // Debug info for problematic tiles
+  if (index === 170) {
+    console.log(`Water tile at index ${index}: position (${tileX}, ${tileY}), row ${Math.floor(index / tilesPerRow)}, col ${index % tilesPerRow}`);
+  }
   
   return spriteSheet.get(tileX, tileY, tilePixelSize, tilePixelSize);
 }
@@ -592,7 +626,7 @@ function drawTile(x, y, tileType) {
     
     switch(tileType) {
       case TILES.WATER:
-        tileIndex = 170;
+        tileIndex = 170; // Assuming this is correct for your spritesheet
         break;
       case TILES.ROCK:
         tileIndex = 48;
