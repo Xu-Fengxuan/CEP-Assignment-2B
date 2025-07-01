@@ -40,7 +40,7 @@ let keys = {};
 let score = 0;
 let spritesLoaded = false;
 
-// Wave Function Collapse rules
+// Wave Function Collapse rules - Refined for proper land formation
 const TILE_RULES = {
   [TILES.WATER]: {
     up: [TILES.WATER, TILES.ROCK, TILES.LAND_BOTTOM_LEFT, TILES.LAND_BOTTOM_MIDDLE, TILES.LAND_BOTTOM_RIGHT],
@@ -56,26 +56,26 @@ const TILE_RULES = {
   },
   [TILES.LAND_TOP_LEFT]: {
     up: [TILES.WATER],
-    right: [TILES.LAND_TOP_MIDDLE, TILES.LAND_MIDDLE, TILES.LAND_RIGHT_MIDDLE],
-    down: [TILES.LAND_LEFT_MIDDLE, TILES.LAND_MIDDLE, TILES.LAND_BOTTOM_LEFT],
+    right: [TILES.LAND_TOP_MIDDLE], // Only top middle can be to the right
+    down: [TILES.LAND_LEFT_MIDDLE], // Only left middle can be below
     left: [TILES.WATER]
   },
   [TILES.LAND_TOP_MIDDLE]: {
     up: [TILES.WATER],
-    right: [TILES.LAND_TOP_MIDDLE, TILES.LAND_TOP_RIGHT, TILES.LAND_MIDDLE, TILES.LAND_RIGHT_MIDDLE],
-    down: [TILES.LAND_MIDDLE, TILES.LAND_BOTTOM_MIDDLE],
-    left: [TILES.LAND_TOP_LEFT, TILES.LAND_TOP_MIDDLE, TILES.LAND_MIDDLE, TILES.LAND_LEFT_MIDDLE]
+    right: [TILES.LAND_TOP_MIDDLE, TILES.LAND_TOP_RIGHT], // Can connect to other top pieces
+    down: [TILES.LAND_MIDDLE], // Only land middle can be below top middle
+    left: [TILES.LAND_TOP_LEFT, TILES.LAND_TOP_MIDDLE] // Can connect to other top pieces
   },
   [TILES.LAND_TOP_RIGHT]: {
     up: [TILES.WATER],
     right: [TILES.WATER],
-    down: [TILES.LAND_MIDDLE, TILES.LAND_RIGHT_MIDDLE, TILES.LAND_BOTTOM_RIGHT],
-    left: [TILES.LAND_TOP_MIDDLE, TILES.LAND_MIDDLE, TILES.LAND_LEFT_MIDDLE]
+    down: [TILES.LAND_RIGHT_MIDDLE], // Only right middle can be below
+    left: [TILES.LAND_TOP_MIDDLE] // Only top middle can be to the left
   },
   [TILES.LAND_LEFT_MIDDLE]: {
-    up: [TILES.LAND_TOP_LEFT, TILES.LAND_LEFT_MIDDLE, TILES.LAND_MIDDLE],
-    right: [TILES.LAND_MIDDLE],
-    down: [TILES.LAND_LEFT_MIDDLE, TILES.LAND_BOTTOM_LEFT, TILES.LAND_MIDDLE],
+    up: [TILES.LAND_TOP_LEFT], // Only top left can be above
+    right: [TILES.LAND_MIDDLE], // Only land middle can be to the right
+    down: [TILES.LAND_LEFT_MIDDLE, TILES.LAND_BOTTOM_LEFT], // Can connect to other left pieces
     left: [TILES.WATER]
   },
   [TILES.LAND_MIDDLE]: {
@@ -85,28 +85,28 @@ const TILE_RULES = {
     left: [TILES.LAND_TOP_LEFT, TILES.LAND_MIDDLE, TILES.LAND_LEFT_MIDDLE, TILES.LAND_BOTTOM_LEFT]
   },
   [TILES.LAND_RIGHT_MIDDLE]: {
-    up: [TILES.LAND_TOP_RIGHT, TILES.LAND_RIGHT_MIDDLE, TILES.LAND_MIDDLE],
+    up: [TILES.LAND_TOP_RIGHT], // Only top right can be above
     right: [TILES.WATER],
-    down: [TILES.LAND_RIGHT_MIDDLE, TILES.LAND_BOTTOM_RIGHT, TILES.LAND_MIDDLE],
-    left: [TILES.LAND_MIDDLE]
+    down: [TILES.LAND_RIGHT_MIDDLE, TILES.LAND_BOTTOM_RIGHT], // Can connect to other right pieces
+    left: [TILES.LAND_MIDDLE] // Only land middle can be to the left
   },
   [TILES.LAND_BOTTOM_LEFT]: {
-    up: [TILES.LAND_LEFT_MIDDLE, TILES.LAND_MIDDLE, TILES.LAND_TOP_LEFT],
-    right: [TILES.LAND_BOTTOM_MIDDLE, TILES.LAND_MIDDLE, TILES.LAND_RIGHT_MIDDLE],
+    up: [TILES.LAND_LEFT_MIDDLE], // Only left middle can be above
+    right: [TILES.LAND_BOTTOM_MIDDLE], // Only bottom middle can be to the right
     down: [TILES.WATER],
     left: [TILES.WATER]
   },
   [TILES.LAND_BOTTOM_MIDDLE]: {
-    up: [TILES.LAND_MIDDLE, TILES.LAND_TOP_MIDDLE],
-    right: [TILES.LAND_BOTTOM_MIDDLE, TILES.LAND_BOTTOM_RIGHT, TILES.LAND_MIDDLE, TILES.LAND_RIGHT_MIDDLE],
+    up: [TILES.LAND_MIDDLE], // Only land middle can be above bottom middle
+    right: [TILES.LAND_BOTTOM_MIDDLE, TILES.LAND_BOTTOM_RIGHT], // Can connect to other bottom pieces
     down: [TILES.WATER],
-    left: [TILES.LAND_BOTTOM_LEFT, TILES.LAND_BOTTOM_MIDDLE, TILES.LAND_MIDDLE, TILES.LAND_LEFT_MIDDLE]
+    left: [TILES.LAND_BOTTOM_LEFT, TILES.LAND_BOTTOM_MIDDLE] // Can connect to other bottom pieces
   },
   [TILES.LAND_BOTTOM_RIGHT]: {
-    up: [TILES.LAND_MIDDLE, TILES.LAND_RIGHT_MIDDLE, TILES.LAND_TOP_RIGHT],
+    up: [TILES.LAND_RIGHT_MIDDLE], // Only right middle can be above
     right: [TILES.WATER],
     down: [TILES.WATER],
-    left: [TILES.LAND_BOTTOM_MIDDLE, TILES.LAND_MIDDLE, TILES.LAND_LEFT_MIDDLE]
+    left: [TILES.LAND_BOTTOM_MIDDLE] // Only bottom middle can be to the left
   }
 };
 
@@ -167,15 +167,30 @@ class WaveFunctionCollapse {
         continue;
       }
 
-      // Weighted selection favoring water and rocks
+      // Enhanced weighted selection with stricter land formation rules
       let selectedTile;
-      if (Math.random() < 0.7) {
-        selectedTile = Math.random() < 0.9 ? TILES.WATER : TILES.ROCK;
+      const waterProbability = 0.75; // Increased water probability
+      const rockProbability = 0.05;
+      
+      if (Math.random() < waterProbability) {
+        selectedTile = TILES.WATER;
+        if (!possibleTiles.includes(selectedTile)) {
+          selectedTile = possibleTiles[Math.floor(Math.random() * possibleTiles.length)];
+        }
+      } else if (Math.random() < rockProbability) {
+        selectedTile = TILES.ROCK;
         if (!possibleTiles.includes(selectedTile)) {
           selectedTile = possibleTiles[Math.floor(Math.random() * possibleTiles.length)];
         }
       } else {
-        selectedTile = possibleTiles[Math.floor(Math.random() * possibleTiles.length)];
+        // For land tiles, apply additional validation
+        const validLandTiles = possibleTiles.filter(tile => this.isValidLandPlacement(chosen.x, chosen.y, tile));
+        if (validLandTiles.length > 0) {
+          selectedTile = validLandTiles[Math.floor(Math.random() * validLandTiles.length)];
+        } else {
+          // Fallback to water if no valid land tiles
+          selectedTile = TILES.WATER;
+        }
       }
 
       // Validate selected tile before setting it
@@ -199,6 +214,85 @@ class WaveFunctionCollapse {
     }
 
     return this.grid;
+  }
+
+  // Enhanced validation for land tile placement
+  isValidLandPlacement(x, y, tileType) {
+    // Check immediate neighbors for incompatible combinations
+    const neighbors = [
+      {x: x, y: y - 1, dir: 'up'},
+      {x: x + 1, y: y, dir: 'right'},
+      {x: x, y: y + 1, dir: 'down'},
+      {x: x - 1, y: y, dir: 'left'}
+    ];
+
+    for (const neighbor of neighbors) {
+      if (neighbor.x >= 0 && neighbor.x < this.width && 
+          neighbor.y >= 0 && neighbor.y < this.height) {
+        
+        const neighborTile = this.grid[neighbor.y][neighbor.x];
+        if (neighborTile !== -1) {
+          // Check if this placement would violate strict adjacency rules
+          if (!this.areCompatibleTiles(tileType, neighborTile, neighbor.dir)) {
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  // Check if two tiles are compatible based on strict rules
+  areCompatibleTiles(centerTile, neighborTile, direction) {
+    if (!TILE_RULES[centerTile] || !TILE_RULES[centerTile][direction]) {
+      return false;
+    }
+    
+    // Additional strict rules for land formation
+    switch (centerTile) {
+      case TILES.LAND_BOTTOM_RIGHT:
+        // Land bottom right cannot be adjacent to certain land types
+        if (direction === 'right' && 
+            [TILES.LAND_MIDDLE, TILES.LAND_LEFT_MIDDLE, TILES.LAND_TOP_LEFT, TILES.LAND_BOTTOM_LEFT].includes(neighborTile)) {
+          return false;
+        }
+        if (direction === 'down' && 
+            [TILES.LAND_MIDDLE, TILES.LAND_TOP_MIDDLE, TILES.LAND_TOP_LEFT, TILES.LAND_TOP_RIGHT].includes(neighborTile)) {
+          return false;
+        }
+        break;
+        
+      case TILES.LAND_TOP_LEFT:
+        // Land top left cannot be adjacent to certain land types
+        if (direction === 'left' && 
+            [TILES.LAND_MIDDLE, TILES.LAND_RIGHT_MIDDLE, TILES.LAND_TOP_RIGHT, TILES.LAND_BOTTOM_RIGHT].includes(neighborTile)) {
+          return false;
+        }
+        if (direction === 'up' && 
+            [TILES.LAND_MIDDLE, TILES.LAND_BOTTOM_MIDDLE, TILES.LAND_BOTTOM_LEFT, TILES.LAND_BOTTOM_RIGHT].includes(neighborTile)) {
+          return false;
+        }
+        break;
+        
+      case TILES.LAND_TOP_RIGHT:
+        // Similar restrictions for top right
+        if (direction === 'right' && 
+            [TILES.LAND_MIDDLE, TILES.LAND_LEFT_MIDDLE, TILES.LAND_TOP_LEFT, TILES.LAND_BOTTOM_LEFT].includes(neighborTile)) {
+          return false;
+        }
+        break;
+        
+      case TILES.LAND_BOTTOM_LEFT:
+        // Similar restrictions for bottom left
+        if (direction === 'left' && 
+            [TILES.LAND_MIDDLE, TILES.LAND_RIGHT_MIDDLE, TILES.LAND_TOP_RIGHT, TILES.LAND_BOTTOM_RIGHT].includes(neighborTile)) {
+          return false;
+        }
+        break;
+    }
+    
+    return TILE_RULES[centerTile][direction].includes(neighborTile);
   }
 
   propagate(startX, startY) {
@@ -232,11 +326,22 @@ class WaveFunctionCollapse {
             const validTiles = TILE_RULES[currentTile][neighbor.dir];
             const oldPossibilities = [...this.possibilities[neighbor.y][neighbor.x]];
             
+            // Apply base adjacency rules
             this.possibilities[neighbor.y][neighbor.x] = 
               this.possibilities[neighbor.y][neighbor.x].filter(tile => validTiles.includes(tile));
 
+            // Apply additional strict validation for land tiles
+            this.possibilities[neighbor.y][neighbor.x] = 
+              this.possibilities[neighbor.y][neighbor.x].filter(tile => 
+                this.isValidLandPlacement(neighbor.x, neighbor.y, tile));
+
             if (this.possibilities[neighbor.y][neighbor.x].length !== oldPossibilities.length) {
               stack.push({x: neighbor.x, y: neighbor.y});
+            }
+
+            // If no possibilities remain, add water as emergency fallback
+            if (this.possibilities[neighbor.y][neighbor.x].length === 0) {
+              this.possibilities[neighbor.y][neighbor.x] = [TILES.WATER];
             }
           }
         }
@@ -537,7 +642,7 @@ function setup() {
 }
 
 function draw() {
-  background(30, 144, 255);
+  background(0x30, 0x4c, 0xc4); // HEX #304cc4
   
   // Update game objects
   boat.update();
