@@ -597,7 +597,7 @@ function getTileFromSheet(index) {
   // Bounds check
   if (index < 0 || index > maxTileIndex) {
     console.warn(`Tile index ${index} is out of bounds (0-${maxTileIndex}). Using water tile instead.`);
-    index = 170; // Fallback to water tile index
+    index = 171; // Fallback to water tile index (changed from 170)
     
     // If even the fallback is out of bounds, use index 0
     if (index > maxTileIndex) {
@@ -609,11 +609,28 @@ function getTileFromSheet(index) {
   const tileY = Math.floor(index / tilesPerRow) * tilePixelSize;
   
   // Debug info for problematic tiles
-  if (index === 170) {
+  if (index === 171) {
     console.log(`Water tile at index ${index}: position (${tileX}, ${tileY}), row ${Math.floor(index / tilesPerRow)}, col ${index % tilesPerRow}`);
   }
   
   return spriteSheet.get(tileX, tileY, tilePixelSize, tilePixelSize);
+}
+
+function getTileName(tileType) {
+  switch(tileType) {
+    case TILES.WATER: return "WAT";
+    case TILES.ROCK: return "ROK";
+    case TILES.LAND_TOP_LEFT: return "LTL";
+    case TILES.LAND_TOP_MIDDLE: return "LTM";
+    case TILES.LAND_TOP_RIGHT: return "LTR";
+    case TILES.LAND_LEFT_MIDDLE: return "LLM";
+    case TILES.LAND_MIDDLE: return "LMD";
+    case TILES.LAND_RIGHT_MIDDLE: return "LRM";
+    case TILES.LAND_BOTTOM_LEFT: return "LBL";
+    case TILES.LAND_BOTTOM_MIDDLE: return "LBM";
+    case TILES.LAND_BOTTOM_RIGHT: return "LBR";
+    default: return "UNK";
+  }
 }
 
 function drawTile(x, y, tileType) {
@@ -626,7 +643,7 @@ function drawTile(x, y, tileType) {
     
     switch(tileType) {
       case TILES.WATER:
-        tileIndex = 170; // Assuming this is correct for your spritesheet
+        tileIndex = 171; // Changed from 170 to 171
         break;
       case TILES.ROCK:
         tileIndex = 48;
@@ -662,7 +679,7 @@ function drawTile(x, y, tileType) {
         overlayIndex = 11;
         break;
       default:
-        tileIndex = 170; // Default to water
+        tileIndex = 171; // Default to water (changed from 170)
     }
     
     // Draw main tile
@@ -687,6 +704,14 @@ function drawTile(x, y, tileType) {
     // Fallback to colored rectangles if sprites not loaded
     drawFallbackTile(tileType);
   }
+  
+  // Add debug text showing tile name
+  fill(255, 255, 255);
+  stroke(0);
+  strokeWeight(1);
+  textSize(8);
+  textAlign(LEFT, TOP);
+  text(getTileName(tileType), 2, 2);
   
   pop();
 }
