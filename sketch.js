@@ -32,12 +32,13 @@ let boat;
 let camera;
 let coins;
 let spriteSheet;
-let boatSheet;
-let tileSize = 16;
+let boatSprites = [];
+let tileSize = 32; // Updated to match 32x32 sprite size
 let sectionSize = 100;
 let mapSections = {};
 let keys = {};
 let score = 0;
+let spritesLoaded = false;
 
 // Wave Function Collapse rules
 const TILE_RULES = {
@@ -325,13 +326,19 @@ class Boat {
 
   getDirection(moveX, moveY) {
     const angle = Math.atan2(moveY, moveX);
-    const directions = 8;
+    const directions = 16; // 16 boat sprites
     const angleStep = (Math.PI * 2) / directions;
-    let directionIndex = Math.round((angle + Math.PI / 8) / angleStep);
+    
+    // ship1 is forward (right/east), ship rotates anticlockwise
+    // Adjust angle so that 0 degrees (right) corresponds to ship1
+    let directionIndex = Math.round((angle + angleStep/2) / angleStep);
     
     if (directionIndex < 0) directionIndex += directions;
     if (directionIndex >= directions) directionIndex -= directions;
     
+    // Since ship1 is forward and rotates anticlockwise, we need to map correctly
+    // 0 degrees (right) = ship1 (index 0)
+    // 22.5 degrees = ship2 (index 1), etc.
     return directionIndex;
   }
 
@@ -387,23 +394,26 @@ class Boat {
   draw() {
     push();
     translate(this.x, this.y);
-    rotate(this.direction * PI / 4);
     
-    // Draw boat placeholder (will be replaced with sprite when available)
-    fill(139, 69, 19);
-    stroke(101, 67, 33);
-    strokeWeight(1);
-    
-    // Boat hull
-    ellipse(0, 0, this.size, this.size * 0.6);
-    
-    // Mast
-    fill(160, 82, 45);
-    rect(-1, -this.size/2, 2, this.size/2);
-    
-    // Sail
-    fill(255, 248, 220);
-    triangle(1, -this.size/2, 1, -this.size/4, this.size/3, -3*this.size/8);
+    if (spritesLoaded && boatSprites[this.direction]) {
+      // Draw the boat sprite
+      imageMode(CENTER);
+      const spriteSize = 32; // Scale up the 16x16 sprite
+      image(boatSprites[this.direction], 0, 0, spriteSize, spriteSize);
+    } else {
+      // Fallback to simple drawing if sprites not loaded
+      fill(139, 69, 19);
+      stroke(101, 67, 33);
+      strokeWeight(1);
+      ellipse(0, 0, this.size, this.size * 0.6);
+      
+      // Add a direction indicator
+      fill(255, 0, 0);
+      const angle = this.direction * (Math.PI * 2) / 16;
+      const dx = Math.cos(angle) * this.size / 2;
+      const dy = Math.sin(angle) * this.size / 2;
+      ellipse(dx, dy, 4, 4);
+    }
     
     pop();
   }
@@ -465,6 +475,17 @@ function generateCoinsForSection(sectionX, sectionY) {
   }
 }
 
+function preload() {
+  // Load the tile spritesheet
+  spriteSheet = loadImage('sprites/sheet.png');
+  
+  // Load all boat sprites (ship1.png to ship16.png)
+  boatSprites = [];
+  for (let i = 1; i <= 16; i++) {
+    boatSprites[i - 1] = loadImage(`sprites/ship/ship${i}.png`);
+  }
+}
+
 function setup() {
   createCanvas(800, 600);
   
@@ -472,6 +493,12 @@ function setup() {
   boat = new Boat(400, 300);
   camera = new Camera();
   coins = [];
+  
+  // Sprites should be loaded by now since preload() runs first
+  spritesLoaded = spriteSheet && spriteSheet.width > 0 && boatSprites.length === 16;
+  console.log("Sprites loaded:", spritesLoaded);
+  console.log("Spritesheet dimensions:", spriteSheet ? `${spriteSheet.width}x${spriteSheet.height}` : "not loaded");
+  console.log("Boat sprites count:", boatSprites.length);
   
   // Generate initial sections around boat
   for (let x = -1; x <= 1; x++) {
@@ -531,10 +558,94 @@ function drawMap() {
   }
 }
 
+function getTileFromSheet(index) {
+  if (!spriteSheet) return null;
+  
+  const tilesPerRow = 20; // Corrected: 640px ÷ 32px = 20 tiles per row
+  const tilePixelSize = 32; // Each tile is 32x32 pixels
+  
+  const tileX = (index % tilesPerRow) * tilePixelSize;
+  const tileY = Math.floor(index / tilesPerRow) * tilePixelSize;
+  
+  return spriteSheet.get(tileX, tileY, tilePixelSize, tilePixelSize);
+}
+
 function drawTile(x, y, tileType) {
   push();
   translate(x, y);
   
+  if (spriteSheet && spriteSheet.width > 0) {
+    let tileIndex;
+    let overlayIndex = null;
+    
+    switch(tileType) {
+      case TILES.WATER:
+        tileIndex = 170;
+        break;
+      case TILES.ROCK:
+        tileIndex = 48;
+        break;
+      case TILES.LAND_TOP_LEFT:
+        tileIndex = 8;
+        break;
+      case TILES.LAND_TOP_MIDDLE:
+        tileIndex = 9;
+        break;
+      case TILES.LAND_TOP_RIGHT:
+        tileIndex = 10;
+        break;
+      case TILES.LAND_LEFT_MIDDLE:
+        tileIndex = 28;
+        break;
+      case TILES.LAND_MIDDLE:
+        tileIndex = 69;
+        break;
+      case TILES.LAND_RIGHT_MIDDLE:
+        tileIndex = 29;
+        break;
+      case TILES.LAND_BOTTOM_LEFT:
+        tileIndex = 47;
+        overlayIndex = 51;
+        break;
+      case TILES.LAND_BOTTOM_MIDDLE:
+        tileIndex = 27;
+        overlayIndex = 31;
+        break;
+      case TILES.LAND_BOTTOM_RIGHT:
+        tileIndex = 7;
+        overlayIndex = 11;
+        break;
+      default:
+        tileIndex = 170; // Default to water
+    }
+    
+    // Draw main tile
+    const mainTile = getTileFromSheet(tileIndex);
+    if (mainTile) {
+      imageMode(CORNER);
+      image(mainTile, 0, 0, tileSize, tileSize);
+    } else {
+      // Fallback color if tile extraction fails
+      drawFallbackTile(tileType);
+    }
+    
+    // Draw overlay if needed
+    if (overlayIndex !== null) {
+      const overlayTile = getTileFromSheet(overlayIndex);
+      if (overlayTile) {
+        imageMode(CORNER);
+        image(overlayTile, 0, 0, tileSize, tileSize);
+      }
+    }
+  } else {
+    // Fallback to colored rectangles if sprites not loaded
+    drawFallbackTile(tileType);
+  }
+  
+  pop();
+}
+
+function drawFallbackTile(tileType) {
   switch(tileType) {
     case TILES.WATER:
       fill(30, 144, 255);
@@ -569,13 +680,13 @@ function drawTile(x, y, tileType) {
     case TILES.LAND_BOTTOM_RIGHT:
       fill(34, 139, 34);
       break;
+    default:
+      fill(30, 144, 255); // Default to water blue
   }
   
   stroke(0, 50);
   strokeWeight(0.5);
   rect(0, 0, tileSize, tileSize);
-  
-  pop();
 }
 
 function drawUI() {
@@ -586,6 +697,13 @@ function drawUI() {
   textSize(24);
   textAlign(LEFT);
   text(`Coins: ${score}`, 20, 30);
+  
+  // Debug info
+  textSize(12);
+  text(`Sprites loaded: ${spritesLoaded}`, 20, 60);
+  text(`Spritesheet: ${spriteSheet ? 'loaded' : 'not loaded'}`, 20, 75);
+  text(`Boat sprites: ${boatSprites.length}`, 20, 90);
+  text(`Boat direction: ${boat.direction}`, 20, 105);
   
   // Instructions
   textSize(16);
