@@ -256,7 +256,7 @@ class Boat {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.direction = BOAT_DIRECTIONS.UP;
+    this.direction = 0; // Initialize to 0 (first sprite)
     this.speed = 2;
     this.size = 12;
   }
@@ -336,9 +336,9 @@ class Boat {
     if (directionIndex < 0) directionIndex += directions;
     if (directionIndex >= directions) directionIndex -= directions;
     
-    // Since ship1 is forward and rotates anticlockwise, we need to map correctly
-    // 0 degrees (right) = ship1 (index 0)
-    // 22.5 degrees = ship2 (index 1), etc.
+    // Ensure the direction is within valid bounds
+    directionIndex = Math.max(0, Math.min(15, directionIndex));
+    
     return directionIndex;
   }
 
@@ -395,11 +395,14 @@ class Boat {
     push();
     translate(this.x, this.y);
     
-    if (spritesLoaded && boatSprites[this.direction]) {
+    // Ensure direction is valid
+    const validDirection = Math.max(0, Math.min(15, this.direction || 0));
+    
+    if (spritesLoaded && boatSprites && boatSprites[validDirection]) {
       // Draw the boat sprite
       imageMode(CENTER);
       const spriteSize = 32; // Scale up the 16x16 sprite
-      image(boatSprites[this.direction], 0, 0, spriteSize, spriteSize);
+      image(boatSprites[validDirection], 0, 0, spriteSize, spriteSize);
     } else {
       // Fallback to simple drawing if sprites not loaded
       fill(139, 69, 19);
@@ -409,7 +412,7 @@ class Boat {
       
       // Add a direction indicator
       fill(255, 0, 0);
-      const angle = this.direction * (Math.PI * 2) / 16;
+      const angle = validDirection * (Math.PI * 2) / 16;
       const dx = Math.cos(angle) * this.size / 2;
       const dy = Math.sin(angle) * this.size / 2;
       ellipse(dx, dy, 4, 4);
@@ -495,10 +498,19 @@ function setup() {
   coins = [];
   
   // Sprites should be loaded by now since preload() runs first
-  spritesLoaded = spriteSheet && spriteSheet.width > 0 && boatSprites.length === 16;
+  spritesLoaded = spriteSheet && spriteSheet.width > 0 && boatSprites && boatSprites.length === 16;
   console.log("Sprites loaded:", spritesLoaded);
   console.log("Spritesheet dimensions:", spriteSheet ? `${spriteSheet.width}x${spriteSheet.height}` : "not loaded");
-  console.log("Boat sprites count:", boatSprites.length);
+  console.log("Boat sprites count:", boatSprites ? boatSprites.length : 0);
+  
+  // Check if all boat sprites loaded properly
+  if (boatSprites) {
+    for (let i = 0; i < boatSprites.length; i++) {
+      if (!boatSprites[i]) {
+        console.warn(`Boat sprite ${i + 1} failed to load`);
+      }
+    }
+  }
   
   // Generate initial sections around boat
   for (let x = -1; x <= 1; x++) {
