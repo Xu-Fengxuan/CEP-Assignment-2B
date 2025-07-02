@@ -681,11 +681,22 @@ function drawMap() {
   const startY = Math.floor((camera.y - 100) / tileSize);
   const endY = Math.ceil((camera.y + height + 100) / tileSize);
   
+  // First pass: Draw all tiles
   for (let y = startY; y < endY; y++) {
     for (let x = startX; x < endX; x++) {
       const tile = boat.getTileAt(x, y);
       if (tile !== undefined) {
         drawTile(x * tileSize, y * tileSize, tile);
+      }
+    }
+  }
+  
+  // Second pass: Draw wave effects on top
+  for (let y = startY; y < endY; y++) {
+    for (let x = startX; x < endX; x++) {
+      const tile = boat.getTileAt(x, y);
+      if (tile !== undefined && isLandTile(tile)) {
+        drawWaveEffect(x * tileSize, y * tileSize, tile);
       }
     }
   }
@@ -869,6 +880,172 @@ function drawFallbackTile(tileType) {
   stroke(0, 50);
   strokeWeight(0.5);
   rect(0, 0, tileSize, tileSize);
+}
+
+// Wave effect parameters
+const WAVE_PARAMS = {
+  maxDistance: 32 / 3, // One third of grid length (tileSize = 32)
+  baseAmplitude: 4, // Base wave thickness
+  frequency: 32, // One full sine cycle per tile length for seamless connection
+  animationSpeed: TWO_PI / 90, // Complete one cycle in exactly 90 frames
+  fadeStart: 0.5, // Start fading at 50% of max distance
+  cornerExtension: 1.414 // √2 for diagonal corner extension
+};
+
+function drawWaveEffect(x, y, tileType) {
+  if (!isLandTile(tileType)) return;
+  
+  push();
+  translate(x + tileSize/2, y + tileSize/2); // Center on tile
+  
+  const time = frameCount * WAVE_PARAMS.animationSpeed;
+  
+  // Draw waves based on tile type
+  switch(tileType) {
+    case TILES.LAND_TOP_LEFT:
+      drawCornerWaves(time, ['right', 'down']);
+      break;
+    case TILES.LAND_TOP_MIDDLE:
+      drawSingleWave(time, 'down');
+      break;
+    case TILES.LAND_TOP_RIGHT:
+      drawCornerWaves(time, ['left', 'down']);
+      break;
+    case TILES.LAND_LEFT_MIDDLE:
+      drawSingleWave(time, 'right');
+      break;
+    case TILES.LAND_MIDDLE:
+      // No waves for middle pieces (surrounded by land)
+      break;
+    case TILES.LAND_RIGHT_MIDDLE:
+      drawSingleWave(time, 'left');
+      break;
+    case TILES.LAND_BOTTOM_LEFT:
+      drawCornerWaves(time, ['right', 'up']);
+      break;
+    case TILES.LAND_BOTTOM_MIDDLE:
+      drawSingleWave(time, 'up');
+      break;
+    case TILES.LAND_BOTTOM_RIGHT:
+      drawCornerWaves(time, ['left', 'up']);
+      break;
+  }
+  
+  pop();
+}
+
+function isLandTile(tileType) {
+  return tileType >= TILES.LAND_TOP_LEFT && tileType <= TILES.LAND_BOTTOM_RIGHT;
+}
+
+function drawSingleWave(time, direction) {
+  const directionVectors = {
+    'up': {x: 0, y: -1, rotation: 0},
+    'down': {x: 0, y: 1, rotation: PI},
+    'left': {x: -1, y: 0, rotation: -PI/2},
+    'right': {x: 1, y: 0, rotation: PI/2}
+  };
+  
+  const dir = directionVectors[direction];
+  
+  push();
+  rotate(dir.rotation);
+  
+  // Draw multiple wave rings
+  for (let distance = 3; distance <= WAVE_PARAMS.maxDistance; distance += 1.5) {
+    const progress = distance / WAVE_PARAMS.maxDistance;
+    const amplitude = WAVE_PARAMS.baseAmplitude * (1 - progress * 0.7);
+    let alpha = 180 * (1 - progress);
+    
+    // Apply fade effect
+    if (progress > WAVE_PARAMS.fadeStart) {
+      alpha *= (1 - progress) / (1 - WAVE_PARAMS.fadeStart);
+    }
+    
+    if (alpha <= 5) continue;
+    
+    stroke(255, 255, 255, alpha);
+    strokeWeight(max(0.5, amplitude * 0.4 * (1 - progress * 0.5)));
+    noFill();
+    
+    // Draw wave line with seamless tiling
+    beginShape();
+    const halfTile = 16; // tileSize / 2
+    for (let i = -halfTile; i <= halfTile; i += 1) {
+      // Use position-based phase for seamless tiling across tiles
+      const phase = (i / WAVE_PARAMS.frequency) * TWO_PI;
+      const waveOffset = sin(phase + time) * amplitude;
+      vertex(i, distance + waveOffset);
+    }
+    endShape();
+  }
+  
+  pop();
+}
+
+function drawCornerWaves(time, directions) {
+  // Draw the two main direction waves
+  for (let dir of directions) {
+    drawSingleWave(time, dir);
+  }
+  
+  // Draw corner diagonal wave for seamless connection
+  if (directions.length === 2) {
+    const dir1 = directions[0];
+    const dir2 = directions[1];
+    
+    push();
+    
+    // Calculate corner angle
+    let angle = 0;
+    if ((dir1 === 'right' && dir2 === 'down') || (dir1 === 'down' && dir2 === 'right')) {
+      angle = PI/4; // Bottom-right
+    } else if ((dir1 === 'left' && dir2 === 'down') || (dir1 === 'down' && dir2 === 'left')) {
+      angle = 3*PI/4; // Bottom-left
+    } else if ((dir1 === 'right' && dir2 === 'up') || (dir1 === 'up' && dir2 === 'right')) {
+      angle = -PI/4; // Top-right
+    } else if ((dir1 === 'left' && dir2 === 'up') || (dir1 === 'up' && dir2 === 'left')) {
+      angle = -3*PI/4; // Top-left
+    }
+    
+    rotate(angle);
+    
+    // Draw diagonal corner wave (extended to maintain connection)
+    const maxCornerDistance = WAVE_PARAMS.maxDistance * WAVE_PARAMS.cornerExtension;
+    
+    for (let distance = 3; distance <= maxCornerDistance; distance += 1.5) {
+      const progress = distance / maxCornerDistance;
+      const amplitude = WAVE_PARAMS.baseAmplitude * (1 - progress * 0.6);
+      let alpha = 150 * (1 - progress);
+      
+      // Apply fade effect
+      if (progress > WAVE_PARAMS.fadeStart) {
+        alpha *= (1 - progress) / (1 - WAVE_PARAMS.fadeStart);
+      }
+      
+      if (alpha <= 5) continue;
+      
+      stroke(255, 255, 255, alpha);
+      strokeWeight(max(0.3, amplitude * 0.3 * (1 - progress * 0.4)));
+      noFill();
+      
+      // Draw extended corner wave line that grows to maintain connection
+      const baseLength = 16; // Half tile size
+      const extensionFactor = 1 + progress * 0.8; // Grow as wave travels
+      const extensionLength = baseLength * extensionFactor;
+      
+      beginShape();
+      for (let i = -extensionLength; i <= extensionLength; i += 1) {
+        // Use consistent phase calculation for seamless tiling
+        const phase = (i / WAVE_PARAMS.frequency) * TWO_PI;
+        const waveOffset = sin(phase + time) * amplitude;
+        vertex(i, distance + waveOffset);
+      }
+      endShape();
+    }
+    
+    pop();
+  }
 }
 
 function drawUI() {
