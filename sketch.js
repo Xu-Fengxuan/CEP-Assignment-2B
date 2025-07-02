@@ -754,22 +754,28 @@ function drawTile(x, y, tileType) {
         tileIndex = 48;
         break;
       case TILES.LAND_TOP_LEFT:
-        tileIndex = 8;
+        tileIndex = 65; // Base tile 65
+        overlayIndex = 8; // Original tile as overlay
         break;
       case TILES.LAND_TOP_MIDDLE:
-        tileIndex = 9;
+        tileIndex = 65; // Base tile 65
+        overlayIndex = 9; // Original tile as overlay
         break;
       case TILES.LAND_TOP_RIGHT:
-        tileIndex = 10;
+        tileIndex = 65; // Base tile 65
+        overlayIndex = 10; // Original tile as overlay
         break;
       case TILES.LAND_LEFT_MIDDLE:
-        tileIndex = 28;
+        tileIndex = 65; // Base tile 65
+        overlayIndex = 28; // Original tile as overlay
         break;
       case TILES.LAND_MIDDLE:
-        tileIndex = 69;
+        tileIndex = 65; // Base tile 65
+        overlayIndex = 69; // Original tile as overlay
         break;
       case TILES.LAND_RIGHT_MIDDLE:
-        tileIndex = 29;
+        tileIndex = 65; // Base tile 65
+        overlayIndex = 29; // Original tile as overlay
         break;
       case TILES.LAND_BOTTOM_LEFT:
         tileIndex = 47;
