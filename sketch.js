@@ -887,7 +887,7 @@ const WAVE_PARAMS = {
   maxDistance: 32 / 3, // One third of grid length (tileSize = 32)
   baseAmplitude: 4, // Base wave thickness
   frequency: 32, // One full sine cycle per tile length for seamless connection
-  animationSpeed: TWO_PI / 90, // Complete one cycle in exactly 90 frames
+  animationSpeed: (2 * Math.PI) / 90, // Complete one cycle in exactly 90 frames
   fadeStart: 0.5, // Start fading at 50% of max distance
   cornerExtension: 1.414 // √2 for diagonal corner extension
 };
@@ -941,9 +941,9 @@ function isLandTile(tileType) {
 function drawSingleWave(time, direction) {
   const directionVectors = {
     'up': {x: 0, y: -1, rotation: 0},
-    'down': {x: 0, y: 1, rotation: PI},
-    'left': {x: -1, y: 0, rotation: -PI/2},
-    'right': {x: 1, y: 0, rotation: PI/2}
+    'down': {x: 0, y: 1, rotation: Math.PI},
+    'left': {x: -1, y: 0, rotation: -Math.PI/2},
+    'right': {x: 1, y: 0, rotation: Math.PI/2}
   };
   
   const dir = directionVectors[direction];
@@ -973,7 +973,7 @@ function drawSingleWave(time, direction) {
     const halfTile = 16; // tileSize / 2
     for (let i = -halfTile; i <= halfTile; i += 1) {
       // Use position-based phase for seamless tiling across tiles
-      const phase = (i / WAVE_PARAMS.frequency) * TWO_PI;
+      const phase = (i / WAVE_PARAMS.frequency) * (2 * Math.PI);
       const waveOffset = sin(phase + time) * amplitude;
       vertex(i, distance + waveOffset);
     }
@@ -999,13 +999,13 @@ function drawCornerWaves(time, directions) {
     // Calculate corner angle
     let angle = 0;
     if ((dir1 === 'right' && dir2 === 'down') || (dir1 === 'down' && dir2 === 'right')) {
-      angle = PI/4; // Bottom-right
+      angle = Math.PI/4; // Bottom-right
     } else if ((dir1 === 'left' && dir2 === 'down') || (dir1 === 'down' && dir2 === 'left')) {
-      angle = 3*PI/4; // Bottom-left
+      angle = 3*Math.PI/4; // Bottom-left
     } else if ((dir1 === 'right' && dir2 === 'up') || (dir1 === 'up' && dir2 === 'right')) {
-      angle = -PI/4; // Top-right
+      angle = -Math.PI/4; // Top-right
     } else if ((dir1 === 'left' && dir2 === 'up') || (dir1 === 'up' && dir2 === 'left')) {
-      angle = -3*PI/4; // Top-left
+      angle = -3*Math.PI/4; // Top-left
     }
     
     rotate(angle);
@@ -1037,7 +1037,7 @@ function drawCornerWaves(time, directions) {
       beginShape();
       for (let i = -extensionLength; i <= extensionLength; i += 1) {
         // Use consistent phase calculation for seamless tiling
-        const phase = (i / WAVE_PARAMS.frequency) * TWO_PI;
+        const phase = (i / WAVE_PARAMS.frequency) * (2 * Math.PI);
         const waveOffset = sin(phase + time) * amplitude;
         vertex(i, distance + waveOffset);
       }
