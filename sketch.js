@@ -304,7 +304,10 @@ class WaveFunctionCollapse {
       
       // Skip if currentTile is invalid
       if (currentTile === undefined || currentTile === -1 || !TILE_RULES[currentTile]) {
-        console.warn(`Invalid currentTile at (${x}, ${y}):`, currentTile);
+        // Reduce console spam - only log unique invalid tiles
+        if (currentTile !== -1) {
+          console.warn(`Invalid currentTile at (${x}, ${y}):`, currentTile);
+        }
         continue;
       }
 
@@ -724,10 +727,7 @@ function getTileFromSheet(index) {
   const tileX = (index % tilesPerRow) * tilePixelSize;
   const tileY = Math.floor(index / tilesPerRow) * tilePixelSize;
   
-  // Debug info for problematic tiles
-  if (index === 171) {
-    console.log(`Water tile at index ${index}: position (${tileX}, ${tileY}), row ${Math.floor(index / tilesPerRow)}, col ${index % tilesPerRow}`);
-  }
+  // Removed excessive debug logging for water tiles
   
   return spriteSheet.get(tileX, tileY, tilePixelSize, tilePixelSize);
 }
@@ -765,28 +765,22 @@ function drawTile(x, y, tileType) {
         tileIndex = 48;
         break;
       case TILES.LAND_TOP_LEFT:
-        tileIndex = 65; // Base tile 65
-        overlayIndex = 8; // Original tile as overlay
+        tileIndex = 8; // Use original tile as main tile (no overlay)
         break;
       case TILES.LAND_TOP_MIDDLE:
-        tileIndex = 65; // Base tile 65
-        overlayIndex = 9; // Original tile as overlay
+        tileIndex = 9; // Use original tile as main tile (no overlay)
         break;
       case TILES.LAND_TOP_RIGHT:
-        tileIndex = 65; // Base tile 65
-        overlayIndex = 10; // Original tile as overlay
+        tileIndex = 10; // Use original tile as main tile (no overlay)
         break;
       case TILES.LAND_LEFT_MIDDLE:
-        tileIndex = 65; // Base tile 65
-        overlayIndex = 28; // Original tile as overlay
+        tileIndex = 28; // Use original tile as main tile (no overlay)
         break;
       case TILES.LAND_MIDDLE:
-        tileIndex = 65; // Base tile 65
-        overlayIndex = 69; // Original tile as overlay
+        tileIndex = 69; // Use original tile as main tile (no overlay)
         break;
       case TILES.LAND_RIGHT_MIDDLE:
-        tileIndex = 65; // Base tile 65
-        overlayIndex = 29; // Original tile as overlay
+        tileIndex = 29; // Use original tile as main tile (no overlay)
         break;
       case TILES.LAND_BOTTOM_LEFT:
         tileIndex = 47;
