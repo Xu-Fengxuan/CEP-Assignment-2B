@@ -218,6 +218,11 @@ class WaveFunctionCollapse {
 
   // Enhanced validation for land tile placement
   isValidLandPlacement(x, y, tileType) {
+    // Allow water and rocks to be placed anywhere
+    if (tileType === TILES.WATER || tileType === TILES.ROCK) {
+      return true;
+    }
+
     // Check immediate neighbors for incompatible combinations
     const neighbors = [
       {x: x, y: y - 1, dir: 'up'},
@@ -590,6 +595,9 @@ function generateSection(sectionX, sectionY) {
   const wfc = new WaveFunctionCollapse(sectionSize, sectionSize);
   mapSections[sectionKey] = wfc.collapse();
 
+  // Validate and fix the generated section
+  validateAndFixSection(sectionX, sectionY);
+
   // Generate coins on water tiles
   generateCoinsForSection(sectionX, sectionY);
 }
@@ -649,6 +657,12 @@ function setup() {
       generateSection(x, y);
     }
   }
+  
+  // Ensure boat spawns on water
+  ensureBoatSpawnOnWater();
+  
+  // Report on initial map generation quality
+  validateInitialMapGeneration();
 }
 
 function draw() {
@@ -1163,4 +1177,159 @@ function keyReleased() {
   if (keyCode === DOWN_ARROW) keys['ArrowDown'] = false;
   if (keyCode === LEFT_ARROW) keys['ArrowLeft'] = false;
   if (keyCode === RIGHT_ARROW) keys['ArrowRight'] = false;
+}
+
+function validateAndFixSection(sectionX, sectionY) {
+  const sectionKey = `${sectionX},${sectionY}`;
+  const sectionData = mapSections[sectionKey];
+  let fixedTiles = 0;
+  const maxFixes = 50; // Prevent infinite loops
+
+  // Check each tile for rule violations
+  for (let y = 0; y < sectionSize && fixedTiles < maxFixes; y++) {
+    for (let x = 0; x < sectionSize && fixedTiles < maxFixes; x++) {
+      const currentTile = sectionData[y][x];
+      
+      if (!isValidTilePlacement(sectionX, sectionY, x, y, currentTile)) {
+        // Fix invalid tile by choosing a valid alternative
+        const validTiles = getValidTilesForPosition(sectionX, sectionY, x, y);
+        if (validTiles.length > 0) {
+          // Prefer water for simplicity, then choose randomly from valid options
+          if (validTiles.includes(TILES.WATER)) {
+            sectionData[y][x] = TILES.WATER;
+          } else {
+            sectionData[y][x] = validTiles[Math.floor(Math.random() * validTiles.length)];
+          }
+          fixedTiles++;
+        }
+      }
+    }
+  }
+
+  if (fixedTiles > 0) {
+    console.log(`Fixed ${fixedTiles} invalid tiles in section ${sectionKey}`);
+  }
+}
+
+function isValidTilePlacement(sectionX, sectionY, localX, localY, tileType) {
+  // Check all four directions for rule compliance
+  const directions = [
+    { dx: 0, dy: -1, dir: 'up' },
+    { dx: 1, dy: 0, dir: 'right' },
+    { dx: 0, dy: 1, dir: 'down' },
+    { dx: -1, dy: 0, dir: 'left' }
+  ];
+
+  for (const direction of directions) {
+    const neighborLocalX = localX + direction.dx;
+    const neighborLocalY = localY + direction.dy;
+    
+    // Get neighbor tile (might be in adjacent section)
+    const neighborTile = getTileAtGlobalPosition(
+      sectionX * sectionSize + neighborLocalX,
+      sectionY * sectionSize + neighborLocalY
+    );
+
+    if (neighborTile !== undefined) {
+      // Check if current tile can be adjacent to neighbor
+      if (!TILE_RULES[tileType] || !TILE_RULES[tileType][direction.dir]) {
+        return false;
+      }
+      
+      if (!TILE_RULES[tileType][direction.dir].includes(neighborTile)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function getValidTilesForPosition(sectionX, sectionY, localX, localY) {
+  const validTiles = [];
+  
+  // Test each tile type to see if it's valid at this position
+  for (const tileType of Object.values(TILES)) {
+    if (isValidTilePlacement(sectionX, sectionY, localX, localY, tileType)) {
+      validTiles.push(tileType);
+    }
+  }
+
+  return validTiles;
+}
+
+function getTileAtGlobalPosition(globalX, globalY) {
+  const sectionX = Math.floor(globalX / sectionSize);
+  const sectionY = Math.floor(globalY / sectionSize);
+  const sectionKey = `${sectionX},${sectionY}`;
+  
+  if (mapSections[sectionKey]) {
+    const localX = globalX - sectionX * sectionSize;
+    const localY = globalY - sectionY * sectionSize;
+    
+    if (localX >= 0 && localX < sectionSize && localY >= 0 && localY < sectionSize) {
+      return mapSections[sectionKey][localY][localX];
+    }
+  }
+  
+  return undefined;
+}
+
+function ensureBoatSpawnOnWater() {
+  // Get boat's initial position in grid coordinates
+  const boatGridX = Math.floor(boat.x / tileSize);
+  const boatGridY = Math.floor(boat.y / tileSize);
+  
+  // Get the section containing the boat
+  const sectionX = Math.floor(boatGridX / sectionSize);
+  const sectionY = Math.floor(boatGridY / sectionSize);
+  const sectionKey = `${sectionX},${sectionY}`;
+  
+  if (mapSections[sectionKey]) {
+    const localX = boatGridX - sectionX * sectionSize;
+    const localY = boatGridY - sectionY * sectionSize;
+    
+    // Ensure the boat's tile and surrounding area are water
+    const radius = 2; // 5x5 area around boat
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const checkX = localX + dx;
+        const checkY = localY + dy;
+        
+        if (checkX >= 0 && checkX < sectionSize && checkY >= 0 && checkY < sectionSize) {
+          mapSections[sectionKey][checkY][checkX] = TILES.WATER;
+        }
+      }
+    }
+    
+    console.log(`Ensured boat spawn area is water at grid (${boatGridX}, ${boatGridY})`);
+  }
+}
+
+function validateInitialMapGeneration() {
+  let totalTiles = 0;
+  let invalidTiles = 0;
+  
+  // Check all generated sections
+  for (const sectionKey in mapSections) {
+    const [sectionX, sectionY] = sectionKey.split(',').map(Number);
+    const sectionData = mapSections[sectionKey];
+    
+    for (let y = 0; y < sectionSize; y++) {
+      for (let x = 0; x < sectionSize; x++) {
+        totalTiles++;
+        const currentTile = sectionData[y][x];
+        
+        if (!isValidTilePlacement(sectionX, sectionY, x, y, currentTile)) {
+          invalidTiles++;
+        }
+      }
+    }
+  }
+  
+  console.log(`Initial map validation: ${totalTiles - invalidTiles}/${totalTiles} tiles valid (${((totalTiles - invalidTiles) / totalTiles * 100).toFixed(1)}%)`);
+  
+  if (invalidTiles > 0) {
+    console.warn(`Found ${invalidTiles} invalid tiles in initial generation`);
+  }
 }
