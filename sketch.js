@@ -36,9 +36,20 @@ let boatSprites = [];
 let tileSize = 32; // Updated to match 32x32 sprite size
 let sectionSize = 100;
 let mapSections = {};
-let keys = {};
 let score = 0;
 let spritesLoaded = false;
+
+// Key codes for movement
+const KEY_CODES = {
+  W: 'W'.charCodeAt(0),
+  A: 'A'.charCodeAt(0),
+  S: 'S'.charCodeAt(0),
+  D: 'D'.charCodeAt(0),
+  UP: UP_ARROW,
+  DOWN: DOWN_ARROW,
+  LEFT: LEFT_ARROW,
+  RIGHT: RIGHT_ARROW
+};
 
 // Wave Function Collapse rules - Refined for proper land formation
 const TILE_RULES = {
@@ -391,14 +402,21 @@ class Boat {
   }
 
   update() {
+    // Handle movement input using keyIsDown for better multi-key support
+    // Use !! to coerce to boolean in case keyIsDown returns undefined when canvas is out of focus
+    const moveUp = !!keyIsDown(KEY_CODES.W) || !!keyIsDown(KEY_CODES.UP);
+    const moveDown = !!keyIsDown(KEY_CODES.S) || !!keyIsDown(KEY_CODES.DOWN);
+    const moveLeft = !!keyIsDown(KEY_CODES.A) || !!keyIsDown(KEY_CODES.LEFT);
+    const moveRight = !!keyIsDown(KEY_CODES.D) || !!keyIsDown(KEY_CODES.RIGHT);
+
+    // Calculate movement direction
     let moveX = 0;
     let moveY = 0;
-
-    // Handle movement input - check both key and keyCode for better compatibility
-    if (keys['w'] || keys['W'] || keys[87] || keys['ArrowUp'] || keys[UP_ARROW]) moveY -= 1;
-    if (keys['s'] || keys['S'] || keys[83] || keys['ArrowDown'] || keys[DOWN_ARROW]) moveY += 1;
-    if (keys['a'] || keys['A'] || keys[65] || keys['ArrowLeft'] || keys[LEFT_ARROW]) moveX -= 1;
-    if (keys['d'] || keys['D'] || keys[68] || keys['ArrowRight'] || keys[RIGHT_ARROW]) moveX += 1;
+    
+    if (moveUp) moveY -= 1;
+    if (moveDown) moveY += 1;
+    if (moveLeft) moveX -= 1;
+    if (moveRight) moveX += 1;
 
     // Normalize diagonal movement
     if (moveX !== 0 && moveY !== 0) {
@@ -1156,27 +1174,6 @@ function drawUI() {
   text("Use WASD or Arrow Keys to move", 20, height - 60);
   text("Collect gold coins for points!", 20, height - 40);
   text("Avoid land tiles", 20, height - 20);
-}
-
-function keyPressed() {
-  keys[key] = true;
-  keys[keyCode] = true;
-}
-
-function keyReleased() {
-  keys[key] = false;
-  keys[keyCode] = false;
-  
-  // Additional cleanup for common movement keys to prevent sticking
-  if (key === 'w' || key === 'W') keys['w'] = false;
-  if (key === 'a' || key === 'A') keys['a'] = false;
-  if (key === 's' || key === 'S') keys['s'] = false;
-  if (key === 'd' || key === 'D') keys['d'] = false;
-  
-  if (keyCode === UP_ARROW) keys['ArrowUp'] = false;
-  if (keyCode === DOWN_ARROW) keys['ArrowDown'] = false;
-  if (keyCode === LEFT_ARROW) keys['ArrowLeft'] = false;
-  if (keyCode === RIGHT_ARROW) keys['ArrowRight'] = false;
 }
 
 function validateAndFixSection(sectionX, sectionY) {
