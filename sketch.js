@@ -453,10 +453,15 @@ class Boat {
     const directions = 16; // 16 boat sprites
     const angleStep = (Math.PI * 2) / directions;
     
-    // ship1 is forward (up/north), ship rotates clockwise
+    // ship1 is forward (up/north), sprites rotate anticlockwise as number increases
     // Adjust angle so that -90 degrees (up) corresponds to ship1
     // Convert from standard math angle to our sprite system
     let adjustedAngle = angle + Math.PI/2; // Rotate by 90 degrees to make up = 0
+    
+    // Since sprites rotate anticlockwise but we want clockwise movement mapping,
+    // we need to reverse the direction
+    adjustedAngle = -adjustedAngle;
+    
     let directionIndex = Math.round(adjustedAngle / angleStep);
     
     if (directionIndex < 0) directionIndex += directions;
