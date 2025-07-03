@@ -884,12 +884,13 @@ function drawFallbackTile(tileType) {
 
 // Wave effect parameters
 const WAVE_PARAMS = {
-  maxDistance: 32 / 3, // One third of grid length (tileSize = 32)
-  baseAmplitude: 4, // Base wave thickness
-  frequency: 32, // One full sine cycle per tile length for seamless connection
-  animationSpeed: (2 * Math.PI) / 90, // Complete one cycle in exactly 90 frames
-  fadeStart: 0.5, // Start fading at 50% of max distance
-  cornerExtension: 1.414 // √2 for diagonal corner extension
+  maxDistance: 24, // Distance waves travel outward
+  baseAmplitude: 2, // Smaller wave amplitude for more realistic look
+  baseThickness: 3, // Thicker starting wave thickness
+  waveSpacing: 6, // Spacing between wave rings (half as many waves)
+  animationSpeed: 0.08, // Slower animation for more realistic waves
+  fadeStart: 0.6, // Start fading later
+  fadeEnd: 0.9 // Complete fade near the end
 };
 
 function drawWaveEffect(x, y, tileType) {
@@ -951,31 +952,36 @@ function drawSingleWave(time, direction) {
   push();
   rotate(dir.rotation);
   
-  // Draw multiple wave rings
-  for (let distance = 3; distance <= WAVE_PARAMS.maxDistance; distance += 1.5) {
+  // Draw multiple wave rings moving outward
+  for (let distance = WAVE_PARAMS.waveSpacing; distance <= WAVE_PARAMS.maxDistance; distance += WAVE_PARAMS.waveSpacing) {
     const progress = distance / WAVE_PARAMS.maxDistance;
-    const amplitude = WAVE_PARAMS.baseAmplitude * (1 - progress * 0.7);
-    let alpha = 180 * (1 - progress);
     
-    // Apply fade effect
+    // Calculate wave thickness - starts thick, gets thinner
+    const thickness = WAVE_PARAMS.baseThickness * (1 - progress * 0.6);
+    
+    // Calculate alpha with fade effect
+    let alpha = 200;
     if (progress > WAVE_PARAMS.fadeStart) {
-      alpha *= (1 - progress) / (1 - WAVE_PARAMS.fadeStart);
+      const fadeProgress = (progress - WAVE_PARAMS.fadeStart) / (WAVE_PARAMS.fadeEnd - WAVE_PARAMS.fadeStart);
+      alpha *= (1 - Math.min(fadeProgress, 1));
     }
     
-    if (alpha <= 5) continue;
+    if (alpha <= 10) continue;
     
     stroke(255, 255, 255, alpha);
-    strokeWeight(max(0.5, amplitude * 0.4 * (1 - progress * 0.5)));
+    strokeWeight(thickness);
     noFill();
     
-    // Draw wave line with seamless tiling
+    // Animate the wave position outward
+    const animatedDistance = distance + sin(time * 2) * 2;
+    
+    // Draw wave as a curved line
     beginShape();
-    const halfTile = 16; // tileSize / 2
-    for (let i = -halfTile; i <= halfTile; i += 1) {
-      // Use position-based phase for seamless tiling across tiles
-      const phase = (i / WAVE_PARAMS.frequency) * (2 * Math.PI);
-      const waveOffset = sin(phase + time) * amplitude;
-      vertex(i, distance + waveOffset);
+    const halfTile = 16; // Half tile size
+    for (let i = -halfTile; i <= halfTile; i += 2) {
+      // Create gentle wave motion
+      const waveOffset = sin(i * 0.3 + time) * WAVE_PARAMS.baseAmplitude * (1 - progress * 0.3);
+      vertex(i, animatedDistance + waveOffset);
     }
     endShape();
   }
@@ -984,62 +990,55 @@ function drawSingleWave(time, direction) {
 }
 
 function drawCornerWaves(time, directions) {
-  // Draw the two main direction waves
+  // Only draw the two main direction waves for corners
+  // No diagonal waves - they will naturally meet at the corners
   for (let dir of directions) {
     drawSingleWave(time, dir);
   }
   
-  // Draw corner diagonal wave for seamless connection
+  // Optional: Add a small corner smoothing effect where waves meet
   if (directions.length === 2) {
-    const dir1 = directions[0];
-    const dir2 = directions[1];
-    
     push();
     
-    // Calculate corner angle
-    let angle = 0;
-    if ((dir1 === 'right' && dir2 === 'down') || (dir1 === 'down' && dir2 === 'right')) {
-      angle = Math.PI/4; // Bottom-right
-    } else if ((dir1 === 'left' && dir2 === 'down') || (dir1 === 'down' && dir2 === 'left')) {
-      angle = 3*Math.PI/4; // Bottom-left
-    } else if ((dir1 === 'right' && dir2 === 'up') || (dir1 === 'up' && dir2 === 'right')) {
-      angle = -Math.PI/4; // Top-right
-    } else if ((dir1 === 'left' && dir2 === 'up') || (dir1 === 'up' && dir2 === 'left')) {
-      angle = -3*Math.PI/4; // Top-left
+    // Calculate the corner position based on directions
+    let cornerX = 0, cornerY = 0;
+    for (let dir of directions) {
+      switch(dir) {
+        case 'right': cornerX = 16; break;
+        case 'left': cornerX = -16; break;
+        case 'down': cornerY = 16; break;
+        case 'up': cornerY = -16; break;
+      }
     }
     
-    rotate(angle);
+    // Draw a small corner connection where the two waves would meet
+    translate(cornerX * 0.7, cornerY * 0.7); // Position at corner intersection
     
-    // Draw diagonal corner wave (extended to maintain connection)
-    const maxCornerDistance = WAVE_PARAMS.maxDistance * WAVE_PARAMS.cornerExtension;
-    
-    for (let distance = 3; distance <= maxCornerDistance; distance += 1.5) {
-      const progress = distance / maxCornerDistance;
-      const amplitude = WAVE_PARAMS.baseAmplitude * (1 - progress * 0.6);
-      let alpha = 150 * (1 - progress);
+    for (let distance = WAVE_PARAMS.waveSpacing; distance <= WAVE_PARAMS.maxDistance * 0.8; distance += WAVE_PARAMS.waveSpacing) {
+      const progress = distance / WAVE_PARAMS.maxDistance;
+      const thickness = WAVE_PARAMS.baseThickness * 0.6 * (1 - progress * 0.7);
       
-      // Apply fade effect
+      let alpha = 150;
       if (progress > WAVE_PARAMS.fadeStart) {
-        alpha *= (1 - progress) / (1 - WAVE_PARAMS.fadeStart);
+        const fadeProgress = (progress - WAVE_PARAMS.fadeStart) / (WAVE_PARAMS.fadeEnd - WAVE_PARAMS.fadeStart);
+        alpha *= (1 - Math.min(fadeProgress, 1));
       }
       
-      if (alpha <= 5) continue;
+      if (alpha <= 10) continue;
       
       stroke(255, 255, 255, alpha);
-      strokeWeight(max(0.3, amplitude * 0.3 * (1 - progress * 0.4)));
+      strokeWeight(thickness);
       noFill();
       
-      // Draw extended corner wave line that grows to maintain connection
-      const baseLength = 16; // Half tile size
-      const extensionFactor = 1 + progress * 0.8; // Grow as wave travels
-      const extensionLength = baseLength * extensionFactor;
+      const animatedDistance = distance + sin(time * 2) * 1.5;
       
+      // Draw a small corner wave segment
       beginShape();
-      for (let i = -extensionLength; i <= extensionLength; i += 1) {
-        // Use consistent phase calculation for seamless tiling
-        const phase = (i / WAVE_PARAMS.frequency) * (2 * Math.PI);
-        const waveOffset = sin(phase + time) * amplitude;
-        vertex(i, distance + waveOffset);
+      for (let angle = 0; angle <= Math.PI/2; angle += Math.PI/16) {
+        const x = cos(angle) * animatedDistance;
+        const y = sin(angle) * animatedDistance;
+        const waveOffset = sin(angle * 4 + time) * WAVE_PARAMS.baseAmplitude * 0.5 * (1 - progress * 0.4);
+        vertex(x + waveOffset, y + waveOffset);
       }
       endShape();
     }
