@@ -389,11 +389,11 @@ class Boat {
     let moveX = 0;
     let moveY = 0;
 
-    // Handle movement input
-    if (keys['w'] || keys['ArrowUp']) moveY -= 1;
-    if (keys['s'] || keys['ArrowDown']) moveY += 1;
-    if (keys['a'] || keys['ArrowLeft']) moveX -= 1;
-    if (keys['d'] || keys['ArrowRight']) moveX += 1;
+    // Handle movement input - check both key and keyCode for better compatibility
+    if (keys['w'] || keys['W'] || keys[87] || keys['ArrowUp'] || keys[UP_ARROW]) moveY -= 1;
+    if (keys['s'] || keys['S'] || keys[83] || keys['ArrowDown'] || keys[DOWN_ARROW]) moveY += 1;
+    if (keys['a'] || keys['A'] || keys[65] || keys['ArrowLeft'] || keys[LEFT_ARROW]) moveX -= 1;
+    if (keys['d'] || keys['D'] || keys[68] || keys['ArrowRight'] || keys[RIGHT_ARROW]) moveX += 1;
 
     // Normalize diagonal movement
     if (moveX !== 0 && moveY !== 0) {
@@ -453,9 +453,11 @@ class Boat {
     const directions = 16; // 16 boat sprites
     const angleStep = (Math.PI * 2) / directions;
     
-    // ship1 is forward (right/east), ship rotates anticlockwise
-    // Adjust angle so that 0 degrees (right) corresponds to ship1
-    let directionIndex = Math.round((angle + angleStep/2) / angleStep);
+    // ship1 is forward (up/north), ship rotates clockwise
+    // Adjust angle so that -90 degrees (up) corresponds to ship1
+    // Convert from standard math angle to our sprite system
+    let adjustedAngle = angle + Math.PI/2; // Rotate by 90 degrees to make up = 0
+    let directionIndex = Math.round(adjustedAngle / angleStep);
     
     if (directionIndex < 0) directionIndex += directions;
     if (directionIndex >= directions) directionIndex -= directions;
@@ -989,62 +991,129 @@ function drawSingleWave(time, direction) {
   pop();
 }
 
-function drawCornerWaves(time, directions) {
-  // Only draw the two main direction waves for corners
-  // No diagonal waves - they will naturally meet at the corners
-  for (let dir of directions) {
-    drawSingleWave(time, dir);
+function drawHalfTileWave(time, direction) {
+  const directionVectors = {
+    'up': {x: 0, y: -1, rotation: 0},
+    'down': {x: 0, y: 1, rotation: Math.PI},
+    'left': {x: -1, y: 0, rotation: -Math.PI/2},
+    'right': {x: 1, y: 0, rotation: Math.PI/2}
+  };
+  
+  const dir = directionVectors[direction];
+  
+  push();
+  rotate(dir.rotation);
+  
+  // Draw multiple wave rings moving outward (half-tile length)
+  for (let distance = WAVE_PARAMS.waveSpacing; distance <= WAVE_PARAMS.maxDistance; distance += WAVE_PARAMS.waveSpacing) {
+    const progress = distance / WAVE_PARAMS.maxDistance;
+    
+    // Calculate wave thickness - starts thick, gets thinner
+    const thickness = WAVE_PARAMS.baseThickness * (1 - progress * 0.6);
+    
+    // Calculate alpha with fade effect
+    let alpha = 200;
+    if (progress > WAVE_PARAMS.fadeStart) {
+      const fadeProgress = (progress - WAVE_PARAMS.fadeStart) / (WAVE_PARAMS.fadeEnd - WAVE_PARAMS.fadeStart);
+      alpha *= (1 - Math.min(fadeProgress, 1));
+    }
+    
+    if (alpha <= 10) continue;
+    
+    stroke(255, 255, 255, alpha);
+    strokeWeight(thickness);
+    noFill();
+    
+    // Animate the wave position outward
+    const animatedDistance = distance + sin(time * 2) * 2;
+    
+    // Draw wave as a curved line (half-tile length)
+    beginShape();
+    const halfTile = 8; // Half of the original half-tile (8 instead of 16)
+    for (let i = -halfTile; i <= halfTile; i += 2) {
+      // Create gentle wave motion
+      const waveOffset = sin(i * 0.3 + time) * WAVE_PARAMS.baseAmplitude * (1 - progress * 0.3);
+      vertex(i, animatedDistance + waveOffset);
+    }
+    endShape();
   }
   
-  // Optional: Add a small corner smoothing effect where waves meet
-  if (directions.length === 2) {
-    push();
-    
-    // Calculate the corner position based on directions
-    let cornerX = 0, cornerY = 0;
-    for (let dir of directions) {
-      switch(dir) {
-        case 'right': cornerX = 16; break;
-        case 'left': cornerX = -16; break;
-        case 'down': cornerY = 16; break;
-        case 'up': cornerY = -16; break;
-      }
-    }
-    
-    // Draw a small corner connection where the two waves would meet
-    translate(cornerX * 0.7, cornerY * 0.7); // Position at corner intersection
-    
-    for (let distance = WAVE_PARAMS.waveSpacing; distance <= WAVE_PARAMS.maxDistance * 0.8; distance += WAVE_PARAMS.waveSpacing) {
-      const progress = distance / WAVE_PARAMS.maxDistance;
-      const thickness = WAVE_PARAMS.baseThickness * 0.6 * (1 - progress * 0.7);
-      
-      let alpha = 150;
-      if (progress > WAVE_PARAMS.fadeStart) {
-        const fadeProgress = (progress - WAVE_PARAMS.fadeStart) / (WAVE_PARAMS.fadeEnd - WAVE_PARAMS.fadeStart);
-        alpha *= (1 - Math.min(fadeProgress, 1));
-      }
-      
-      if (alpha <= 10) continue;
-      
-      stroke(255, 255, 255, alpha);
-      strokeWeight(thickness);
-      noFill();
-      
-      const animatedDistance = distance + sin(time * 2) * 1.5;
-      
-      // Draw a small corner wave segment
-      beginShape();
-      for (let angle = 0; angle <= Math.PI/2; angle += Math.PI/16) {
-        const x = cos(angle) * animatedDistance;
-        const y = sin(angle) * animatedDistance;
-        const waveOffset = sin(angle * 4 + time) * WAVE_PARAMS.baseAmplitude * 0.5 * (1 - progress * 0.4);
-        vertex(x + waveOffset, y + waveOffset);
-      }
-      endShape();
-    }
-    
-    pop();
+  pop();
+}
+
+function drawCornerWaves(time, directions) {
+  // Draw the two main direction waves for corners (half-tile length)
+  for (let dir of directions) {
+    drawHalfTileWave(time, dir);
   }
+  
+  // Add diagonal corner wave effect
+  push();
+  
+  // Calculate the corner position and diagonal direction based on directions
+  let cornerX = 0, cornerY = 0;
+  let startAngle = 0, endAngle = 0;
+  
+  // Determine which corner this is and set the diagonal wave accordingly
+  if (directions.includes('right') && directions.includes('down')) {
+    // Top-left corner - diagonal wave in top-left quadrant
+    cornerX = -8;
+    cornerY = -8;
+    startAngle = Math.PI; // Start from left
+    endAngle = Math.PI * 1.5; // End at top
+  } else if (directions.includes('left') && directions.includes('down')) {
+    // Top-right corner - diagonal wave in top-right quadrant
+    cornerX = 8;
+    cornerY = -8;
+    startAngle = Math.PI * 1.5; // Start from top
+    endAngle = Math.PI * 2; // End at right
+  } else if (directions.includes('right') && directions.includes('up')) {
+    // Bottom-left corner - diagonal wave in bottom-left quadrant
+    cornerX = -8;
+    cornerY = 8;
+    startAngle = Math.PI * 0.5; // Start from bottom
+    endAngle = Math.PI; // End at left
+  } else if (directions.includes('left') && directions.includes('up')) {
+    // Bottom-right corner - diagonal wave in bottom-right quadrant
+    cornerX = 8;
+    cornerY = 8;
+    startAngle = 0; // Start from right
+    endAngle = Math.PI * 0.5; // End at bottom
+  }
+  
+  // Draw the diagonal corner wave
+  translate(cornerX, cornerY);
+  
+  for (let distance = WAVE_PARAMS.waveSpacing; distance <= WAVE_PARAMS.maxDistance * 0.7; distance += WAVE_PARAMS.waveSpacing) {
+    const progress = distance / WAVE_PARAMS.maxDistance;
+    const thickness = WAVE_PARAMS.baseThickness * 0.7 * (1 - progress * 0.6);
+    
+    let alpha = 160;
+    if (progress > WAVE_PARAMS.fadeStart) {
+      const fadeProgress = (progress - WAVE_PARAMS.fadeStart) / (WAVE_PARAMS.fadeEnd - WAVE_PARAMS.fadeStart);
+      alpha *= (1 - Math.min(fadeProgress, 1));
+    }
+    
+    if (alpha <= 10) continue;
+    
+    stroke(255, 255, 255, alpha);
+    strokeWeight(thickness);
+    noFill();
+    
+    const animatedDistance = distance + sin(time * 2) * 1.5;
+    
+    // Draw diagonal wave as a quarter circle arc
+    beginShape();
+    for (let angle = startAngle; angle <= endAngle; angle += Math.PI/16) {
+      const x = cos(angle) * animatedDistance;
+      const y = sin(angle) * animatedDistance;
+      const waveOffset = sin(angle * 4 + time) * WAVE_PARAMS.baseAmplitude * 0.5 * (1 - progress * 0.4);
+      vertex(x + waveOffset * cos(angle), y + waveOffset * sin(angle));
+    }
+    endShape();
+  }
+  
+  pop();
 }
 
 function drawUI() {
@@ -1078,4 +1147,15 @@ function keyPressed() {
 function keyReleased() {
   keys[key] = false;
   keys[keyCode] = false;
+  
+  // Additional cleanup for common movement keys to prevent sticking
+  if (key === 'w' || key === 'W') keys['w'] = false;
+  if (key === 'a' || key === 'A') keys['a'] = false;
+  if (key === 's' || key === 'S') keys['s'] = false;
+  if (key === 'd' || key === 'D') keys['d'] = false;
+  
+  if (keyCode === UP_ARROW) keys['ArrowUp'] = false;
+  if (keyCode === DOWN_ARROW) keys['ArrowDown'] = false;
+  if (keyCode === LEFT_ARROW) keys['ArrowLeft'] = false;
+  if (keyCode === RIGHT_ARROW) keys['ArrowRight'] = false;
 }
