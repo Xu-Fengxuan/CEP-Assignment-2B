@@ -45,10 +45,10 @@ const KEY_CODES = {
   A: 'A'.charCodeAt(0),
   S: 'S'.charCodeAt(0),
   D: 'D'.charCodeAt(0),
-  UP: UP_ARROW,
-  DOWN: DOWN_ARROW,
-  LEFT: LEFT_ARROW,
-  RIGHT: RIGHT_ARROW
+  UP: 38,
+  DOWN: 40,
+  LEFT: 37,
+  RIGHT: 39
 };
 
 // Wave Function Collapse rules - Refined for proper land formation
