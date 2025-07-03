@@ -181,7 +181,7 @@ class WaveFunctionCollapse {
       // Enhanced weighted selection with stricter land formation rules
       let selectedTile;
       const waterProbability = 0.75; // Increased water probability
-      const rockProbability = 0.05;
+      const rockProbability = 0.03;
       
       if (Math.random() < waterProbability) {
         selectedTile = TILES.WATER;
@@ -197,7 +197,15 @@ class WaveFunctionCollapse {
         // For land tiles, apply additional validation
         const validLandTiles = possibleTiles.filter(tile => this.isValidLandPlacement(chosen.x, chosen.y, tile));
         if (validLandTiles.length > 0) {
-          selectedTile = validLandTiles[Math.floor(Math.random() * validLandTiles.length)];
+          // Check if there are neighboring land middle tiles to encourage clustering
+          const hasLandMiddleNeighbor = this.hasLandMiddleNeighbor(chosen.x, chosen.y);
+          
+          if (hasLandMiddleNeighbor && validLandTiles.includes(TILES.LAND_MIDDLE) && Math.random() < 0.7) {
+            // 70% chance to place land middle if there's already a land middle neighbor
+            selectedTile = TILES.LAND_MIDDLE;
+          } else {
+            selectedTile = validLandTiles[Math.floor(Math.random() * validLandTiles.length)];
+          }
         } else {
           // Fallback to water if no valid land tiles
           selectedTile = TILES.WATER;
@@ -367,6 +375,29 @@ class WaveFunctionCollapse {
       }
     }
   }
+
+  // Check if there are any land middle tiles adjacent to this position
+  hasLandMiddleNeighbor(x, y) {
+    const neighbors = [
+      {x: x, y: y - 1}, // up
+      {x: x + 1, y: y}, // right
+      {x: x, y: y + 1}, // down
+      {x: x - 1, y: y}  // left
+    ];
+
+    for (const neighbor of neighbors) {
+      if (neighbor.x >= 0 && neighbor.x < this.width && 
+          neighbor.y >= 0 && neighbor.y < this.height) {
+        
+        const neighborTile = this.grid[neighbor.y][neighbor.x];
+        if (neighborTile === TILES.LAND_MIDDLE) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
 }
 
 class Camera {
@@ -397,7 +428,7 @@ class Boat {
     this.x = x;
     this.y = y;
     this.direction = 0; // Initialize to 0 (first sprite)
-    this.speed = 2;
+    this.speed = 3;
     this.size = 12;
   }
 
@@ -429,15 +460,12 @@ class Boat {
       this.direction = this.getDirection(moveX, moveY);
     }
 
-    // Move boat
+    // Move boat with sliding collision
     const newX = this.x + moveX * this.speed;
     const newY = this.y + moveY * this.speed;
 
-    // Check collision with land tiles
-    if (this.canMoveTo(newX, newY)) {
-      this.x = newX;
-      this.y = newY;
-    }
+    // Check collision with land tiles and implement sliding
+    this.moveWithSliding(newX, newY, moveX, moveY);
 
     // Check for coin collection
     this.collectCoins();
@@ -446,12 +474,63 @@ class Boat {
     this.checkSectionGeneration();
   }
 
-  canMoveTo(x, y) {
-    const gridX = Math.floor(x / tileSize);
-    const gridY = Math.floor(y / tileSize);
-    const tile = this.getTileAt(gridX, gridY);
+  // Move boat with sliding collision detection
+  moveWithSliding(targetX, targetY, moveX, moveY) {
+    // First try to move to the target position
+    if (this.canMoveTo(targetX, targetY)) {
+      this.x = targetX;
+      this.y = targetY;
+      return;
+    }
     
-    return tile === TILES.WATER || tile === TILES.ROCK || tile === undefined;
+    // If full movement is blocked, try sliding along walls
+    // Try horizontal movement only
+    const horizontalX = this.x + moveX * this.speed;
+    const canMoveHorizontal = this.canMoveTo(horizontalX, this.y);
+    
+    // Try vertical movement only
+    const verticalY = this.y + moveY * this.speed;
+    const canMoveVertical = this.canMoveTo(this.x, verticalY);
+    
+    // Apply sliding movement
+    if (canMoveHorizontal && canMoveVertical) {
+      // Both directions are free - this shouldn't happen if we got here
+      // but handle it just in case
+      this.x = horizontalX;
+      this.y = verticalY;
+    } else if (canMoveHorizontal) {
+      // Only horizontal movement is possible - slide along vertical wall
+      this.x = horizontalX;
+    } else if (canMoveVertical) {
+      // Only vertical movement is possible - slide along horizontal wall
+      this.y = verticalY;
+    }
+    // If neither direction is possible, boat stays in place
+  }
+
+  canMoveTo(x, y) {
+    // Check multiple points around the boat to prevent clipping through corners
+    const halfSize = this.size / 2;
+    const checkPoints = [
+      {x: x, y: y}, // center
+      {x: x - halfSize, y: y - halfSize}, // top-left
+      {x: x + halfSize, y: y - halfSize}, // top-right
+      {x: x - halfSize, y: y + halfSize}, // bottom-left
+      {x: x + halfSize, y: y + halfSize}, // bottom-right
+    ];
+    
+    for (const point of checkPoints) {
+      const gridX = Math.floor(point.x / tileSize);
+      const gridY = Math.floor(point.y / tileSize);
+      const tile = this.getTileAt(gridX, gridY);
+      
+      // If any point hits a land tile, movement is blocked
+      if (tile !== TILES.WATER && tile !== TILES.ROCK && tile !== undefined) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 
   getTileAt(gridX, gridY) {
@@ -1168,7 +1247,9 @@ function drawUI() {
   text(`Spritesheet: ${spriteSheet ? 'loaded' : 'not loaded'}`, 20, 75);
   text(`Boat sprites: ${boatSprites.length}`, 20, 90);
   text(`Boat direction: ${boat.direction}`, 20, 105);
-  text(`Boat position: (${Math.round(boat.x)}, ${Math.round(boat.y)})`, 20, 120);
+  const boatGridX = Math.floor(boat.x / tileSize);
+  const boatGridY = Math.floor(boat.y / tileSize);
+  text(`Boat grid: (${boatGridX}, ${boatGridY})`, 20, 120);
   
   // Instructions
   textSize(16);
