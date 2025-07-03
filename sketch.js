@@ -33,7 +33,7 @@ let camera;
 let coins;
 let spriteSheet;
 let boatSprites = [];
-let tileSize = 32; // Updated to match 32x32 sprite size
+let tileSize = 32;
 let sectionSize = 100;
 let mapSections = {};
 let score = 0;
