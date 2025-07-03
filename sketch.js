@@ -867,12 +867,12 @@ function drawTile(x, y, tileType) {
   }
   
   // Add debug text showing tile name
-  fill(255, 255, 255);
-  stroke(0);
-  strokeWeight(1);
-  textSize(8);
-  textAlign(LEFT, TOP);
-  text(getTileName(tileType), 2, 2);
+  // fill(255, 255, 255);
+  // stroke(0);
+  // strokeWeight(1);
+  // textSize(8);
+  // textAlign(LEFT, TOP);
+  // text(getTileName(tileType), 2, 2);
   
   pop();
 }
@@ -1168,6 +1168,7 @@ function drawUI() {
   text(`Spritesheet: ${spriteSheet ? 'loaded' : 'not loaded'}`, 20, 75);
   text(`Boat sprites: ${boatSprites.length}`, 20, 90);
   text(`Boat direction: ${boat.direction}`, 20, 105);
+  text(`Boat position: (${Math.round(boat.x)}, ${Math.round(boat.y)})`, 20, 120);
   
   // Instructions
   textSize(16);
