@@ -427,9 +427,11 @@ class Boat {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.direction = 0; // Initialize to 0 (first sprite)
+    this.direction = 0; // Current visual direction
+    this.targetDirection = 0; // Target direction to smoothly transition to
+    this.directionSpeed = 0.3; // How fast direction changes (0.1 = slow, 1.0 = instant)
     this.speed = 3;
-    this.size = 12;
+    this.radius = 16; // Changed from size to radius (half of 32px sprite diameter)
   }
 
   update() {
@@ -455,10 +457,13 @@ class Boat {
       moveY *= 0.707;
     }
 
-    // Update direction based on movement
+    // Update target direction based on movement
     if (moveX !== 0 || moveY !== 0) {
-      this.direction = this.getDirection(moveX, moveY);
+      this.targetDirection = this.getDirection(moveX, moveY);
     }
+
+    // Smoothly interpolate current direction towards target direction
+    this.updateDirectionSmooth();
 
     // Move boat with sliding collision
     const newX = this.x + moveX * this.speed;
@@ -472,6 +477,36 @@ class Boat {
 
     // Generate new sections if needed
     this.checkSectionGeneration();
+  }
+
+  updateDirectionSmooth() {
+    if (this.direction === this.targetDirection) return;
+
+    // Calculate the shortest rotation path (accounting for wrap-around)
+    let diff = this.targetDirection - this.direction;
+    
+    // Handle wrap-around (shortest path around the circle)
+    if (diff > 8) {
+      diff -= 16;
+    } else if (diff < -8) {
+      diff += 16;
+    }
+    
+    // Apply smooth interpolation
+    const directionChange = diff * this.directionSpeed;
+    this.direction += directionChange;
+    
+    // Handle wrap-around for current direction
+    if (this.direction >= 16) {
+      this.direction -= 16;
+    } else if (this.direction < 0) {
+      this.direction += 16;
+    }
+    
+    // Snap to target if very close to prevent infinite micro-adjustments
+    if (Math.abs(diff) < 0.1) {
+      this.direction = this.targetDirection;
+    }
   }
 
   // Move boat with sliding collision detection
@@ -509,28 +544,91 @@ class Boat {
   }
 
   canMoveTo(x, y) {
-    // Check multiple points around the boat to prevent clipping through corners
-    const halfSize = this.size / 2;
-    const checkPoints = [
-      {x: x, y: y}, // center
-      {x: x - halfSize, y: y - halfSize}, // top-left
-      {x: x + halfSize, y: y - halfSize}, // top-right
-      {x: x - halfSize, y: y + halfSize}, // bottom-left
-      {x: x + halfSize, y: y + halfSize}, // bottom-right
-    ];
+    // Use circular collision detection
+    const radius = this.radius;
     
-    for (const point of checkPoints) {
-      const gridX = Math.floor(point.x / tileSize);
-      const gridY = Math.floor(point.y / tileSize);
+    // Check collision in a circle around the boat position
+    const checkRadius = radius + 2; // Small buffer for smoother collision
+    const steps = 8; // Number of points to check around the circle
+    
+    for (let i = 0; i < steps; i++) {
+      const angle = (i / steps) * Math.PI * 2;
+      const checkX = x + Math.cos(angle) * checkRadius;
+      const checkY = y + Math.sin(angle) * checkRadius;
+      
+      const gridX = Math.floor(checkX / tileSize);
+      const gridY = Math.floor(checkY / tileSize);
       const tile = this.getTileAt(gridX, gridY);
       
-      // If any point hits a land tile, movement is blocked
-      if (tile !== TILES.WATER && tile !== TILES.ROCK && tile !== undefined) {
+      // If any point on the circle hits a land tile, check specific collision area
+      if (isLandTile(tile)) {
+        if (this.checkLandTileCollision(checkX, checkY, gridX, gridY, tile)) {
+          return false;
+        }
+      }
+    }
+    
+    // Also check the center point
+    const centerGridX = Math.floor(x / tileSize);
+    const centerGridY = Math.floor(y / tileSize);
+    const centerTile = this.getTileAt(centerGridX, centerGridY);
+    
+    if (isLandTile(centerTile)) {
+      if (this.checkLandTileCollision(x, y, centerGridX, centerGridY, centerTile)) {
         return false;
       }
     }
     
     return true;
+  }
+
+  checkLandTileCollision(worldX, worldY, gridX, gridY, tileType) {
+    // Convert world coordinates to local tile coordinates (0-32)
+    const localX = worldX - (gridX * tileSize);
+    const localY = worldY - (gridY * tileSize);
+    
+    // Check collision based on tile type's specific collision area
+    switch(tileType) {
+      case TILES.LAND_TOP_LEFT:
+        // Bottom right quadrant only (16-32, 16-32)
+        return localX >= 16 && localY >= 16;
+        
+      case TILES.LAND_TOP_MIDDLE:
+        // Bottom half only (0-32, 16-32)
+        return localY >= 16;
+        
+      case TILES.LAND_TOP_RIGHT:
+        // Bottom left quadrant only (0-16, 16-32)
+        return localX <= 16 && localY >= 16;
+        
+      case TILES.LAND_LEFT_MIDDLE:
+        // Right half only (16-32, 0-32)
+        return localX >= 16;
+        
+      case TILES.LAND_MIDDLE:
+        // Whole tile (0-32, 0-32)
+        return true;
+        
+      case TILES.LAND_RIGHT_MIDDLE:
+        // Left half only (0-16, 0-32)
+        return localX <= 16;
+        
+      case TILES.LAND_BOTTOM_LEFT:
+        // Top right quadrant only (16-32, 0-16)
+        return localX >= 16 && localY <= 16;
+        
+      case TILES.LAND_BOTTOM_MIDDLE:
+        // Top half only (0-32, 0-16)
+        return localY <= 16;
+        
+      case TILES.LAND_BOTTOM_RIGHT:
+        // Top left quadrant only (0-16, 0-16)
+        return localX <= 16 && localY <= 16;
+        
+      default:
+        // For any other land tiles, use full collision
+        return true;
+    }
   }
 
   getTileAt(gridX, gridY) {
@@ -580,7 +678,8 @@ class Boat {
       const coin = coins[i];
       const distance = Math.sqrt((this.x - coin.x) ** 2 + (this.y - coin.y) ** 2);
       
-      if (distance < this.size) {
+      // Use radius instead of size for collision
+      if (distance < this.radius) {
         coins.splice(i, 1);
         score += 10;
       }
@@ -628,26 +727,33 @@ class Boat {
     push();
     translate(this.x, this.y);
     
-    // Ensure direction is valid
-    const validDirection = Math.max(0, Math.min(15, this.direction || 0));
+    // Use the smoothly interpolated direction for rendering
+    const renderDirection = Math.round(this.direction);
+    const validDirection = Math.max(0, Math.min(15, renderDirection));
     
     if (spritesLoaded && boatSprites && boatSprites[validDirection]) {
       // Draw the boat sprite
       imageMode(CENTER);
       const spriteSize = 32; // Scale up the 16x16 sprite
       image(boatSprites[validDirection], 0, 0, spriteSize, spriteSize);
+      
+      // Debug: Draw collision circle (uncomment to visualize)
+      // stroke(255, 0, 0, 100);
+      // strokeWeight(1);
+      // noFill();
+      // ellipse(0, 0, this.radius * 2, this.radius * 2);
     } else {
       // Fallback to simple drawing if sprites not loaded
       fill(139, 69, 19);
       stroke(101, 67, 33);
       strokeWeight(1);
-      ellipse(0, 0, this.size, this.size * 0.6);
+      ellipse(0, 0, this.radius * 2, this.radius * 2);
       
       // Add a direction indicator
       fill(255, 0, 0);
       const angle = validDirection * (Math.PI * 2) / 16;
-      const dx = Math.cos(angle) * this.size / 2;
-      const dy = Math.sin(angle) * this.size / 2;
+      const dx = Math.cos(angle) * this.radius / 2;
+      const dy = Math.sin(angle) * this.radius / 2;
       ellipse(dx, dy, 4, 4);
     }
     
@@ -818,6 +924,9 @@ function drawMap() {
       const tile = boat.getTileAt(x, y);
       if (tile !== undefined && isLandTile(tile)) {
         drawWaveEffect(x * tileSize, y * tileSize, tile);
+        
+        // Uncomment to debug collision areas:
+        drawTileCollisionDebug(x * tileSize, y * tileSize, tile);
       }
     }
   }
@@ -1246,7 +1355,7 @@ function drawUI() {
   text(`Sprites loaded: ${spritesLoaded}`, 20, 60);
   text(`Spritesheet: ${spriteSheet ? 'loaded' : 'not loaded'}`, 20, 75);
   text(`Boat sprites: ${boatSprites.length}`, 20, 90);
-  text(`Boat direction: ${boat.direction}`, 20, 105);
+  text(`Boat direction: ${boat.direction.toFixed(2)} -> ${boat.targetDirection}`, 20, 105);
   const boatGridX = Math.floor(boat.x / tileSize);
   const boatGridY = Math.floor(boat.y / tileSize);
   text(`Boat grid: (${boatGridX}, ${boatGridY})`, 20, 120);
@@ -1256,6 +1365,67 @@ function drawUI() {
   text("Use WASD or Arrow Keys to move", 20, height - 60);
   text("Collect gold coins for points!", 20, height - 40);
   text("Avoid land tiles", 20, height - 20);
+}
+
+// Add debug function to visualize collision areas (optional - uncomment in drawMap to use)
+function drawTileCollisionDebug(x, y, tileType) {
+  if (!isLandTile(tileType)) return;
+  
+  push();
+  translate(x, y);
+  
+  // Draw collision area in semi-transparent red
+  fill(255, 0, 0, 50);
+  noStroke();
+  
+  switch(tileType) {
+    case TILES.LAND_TOP_LEFT:
+      // Bottom right quadrant
+      rect(16, 16, 16, 16);
+      break;
+      
+    case TILES.LAND_TOP_MIDDLE:
+      // Bottom half
+      rect(0, 16, 32, 16);
+      break;
+      
+    case TILES.LAND_TOP_RIGHT:
+      // Bottom left quadrant
+      rect(0, 16, 16, 16);
+      break;
+      
+    case TILES.LAND_LEFT_MIDDLE:
+      // Right half
+      rect(16, 0, 16, 32);
+      break;
+      
+    case TILES.LAND_MIDDLE:
+      // Whole tile
+      rect(0, 0, 32, 32);
+      break;
+      
+    case TILES.LAND_RIGHT_MIDDLE:
+      // Left half
+      rect(0, 0, 16, 32);
+      break;
+      
+    case TILES.LAND_BOTTOM_LEFT:
+      // Top right quadrant
+      rect(16, 0, 16, 16);
+      break;
+      
+    case TILES.LAND_BOTTOM_MIDDLE:
+      // Top half
+      rect(0, 0, 32, 16);
+      break;
+      
+    case TILES.LAND_BOTTOM_RIGHT:
+      // Top left quadrant
+      rect(0, 0, 16, 16);
+      break;
+  }
+  
+  pop();
 }
 
 function validateAndFixSection(sectionX, sectionY) {
