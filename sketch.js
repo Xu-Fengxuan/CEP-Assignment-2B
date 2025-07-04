@@ -60,18 +60,7 @@ let damageCollisionState = {
 let healthDecreaseTimer = 0;
 
 // Shop system
-let shop = {
-  isOpen: false,
-  x: width - 200,
-  y: 100,
-  width: 180,
-  height: 300,
-  items: [
-    { name: "Health Potion", cost: 50, description: "Restore 25 health" },
-    { name: "Shield Boost", cost: 75, description: "Add 50 shield" },
-    { name: "Speed Upgrade", cost: 100, description: "Increase boat speed" }
-  ]
-};
+let shop;
 
 // Boat upgrades
 let boatSpeedMultiplier = 1.0;
@@ -930,9 +919,19 @@ function preload() {
 function setup() {
   createCanvas(800, 600);
   
-  // Initialize shop position after canvas is created
-  shop.x = width - 200;
-  shop.y = 100;
+  // Initialize shop after canvas is created
+  shop = {
+    isOpen: false,
+    x: width - 200,
+    y: 100,
+    width: 180,
+    height: 300,
+    items: [
+      { name: "Health Potion", cost: 50, description: "Restore 25 health" },
+      { name: "Shield Boost", cost: 75, description: "Add 50 shield" },
+      { name: "Speed Upgrade", cost: 100, description: "Increase boat speed" }
+    ]
+  };
   
   // Initialize game objects
   boat = new Boat(400, 300);
