@@ -35,6 +35,7 @@ const GAME_STATES = {
 
 // Game variables
 let gameState = GAME_STATES.START;
+let mapGenerated = false;
 let gameMap;
 let boat;
 let camera;
@@ -827,22 +828,22 @@ class Boat {
       }
     }
   }
+}
 
-  keyPressed() {
-    if (gameState === GAME_STATES.START) {
-      gameState = GAME_STATES.PLAYING;
-    } else if (gameState === GAME_STATES.GAME_OVER) {
-      // Reset game
-      health = 100;
-      shield = 0;
-      score = 0;
-      boatSpeedMultiplier = 1.0;
-      boat.x = 400;
-      boat.y = 300;
-      damageCollisionState.rock = false;
-      damageCollisionState.land = false;
-      gameState = GAME_STATES.PLAYING;
-    }
+function keyPressed() {
+  if (gameState === GAME_STATES.START && mapGenerated) {
+    gameState = GAME_STATES.PLAYING;
+  } else if (gameState === GAME_STATES.GAME_OVER) {
+    // Reset game
+    health = 100;
+    shield = 0;
+    score = 0;
+    boatSpeedMultiplier = 1.0;
+    boat.x = 400;
+    boat.y = 300;
+    damageCollisionState.rock = false;
+    damageCollisionState.land = false;
+    gameState = GAME_STATES.PLAYING;
   }
 }
 
@@ -965,6 +966,9 @@ function setup() {
   
   // Report on initial map generation quality
   validateInitialMapGeneration();
+  
+  // Mark map as generated
+  mapGenerated = true;
 }
 
 function draw() {
@@ -1049,10 +1053,16 @@ function drawStartScreen() {
   text("- Lose 10 health hitting land", width/2, height/2 + 85);
   text("- Use coins to buy health, shields, and upgrades", width/2, height/2 + 105);
   
-  // Start prompt
-  fill(255, 255, 0);
-  textSize(24);
-  text("Press any key to start!", width/2, height/2 + 150);
+  // Start prompt - only show when map is generated
+  if (mapGenerated) {
+    fill(255, 255, 0);
+    textSize(24);
+    text("Press any key to start!", width/2, height/2 + 150);
+  } else {
+    fill(255, 255, 255);
+    textSize(18);
+    text("Generating map...", width/2, height/2 + 150);
+  }
 }
 
 function drawGameOverScreen() {
