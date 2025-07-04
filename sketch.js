@@ -26,16 +26,7 @@ const BOAT_DIRECTIONS = {
   UP_LEFT: 7
 };
 
-// Game states
-const GAME_STATES = {
-  START: 0,
-  PLAYING: 1,
-  GAME_OVER: 2
-};
-
 // Game variables
-let gameState = GAME_STATES.START;
-let mapGenerated = false;
 let gameMap;
 let boat;
 let camera;
@@ -48,23 +39,8 @@ let mapSections = {};
 let score = 0;
 let spritesLoaded = false;
 
-// Health and damage system
-let health = 100;
-let maxHealth = 100;
-let shield = 0;
-let maxShield = 100;
-let lastDamageFrame = 0;
-let damageCollisionState = {
-  rock: false,
-  land: false
-};
-let healthDecreaseTimer = 0;
-
-// Shop system
-let shop;
-
-// Boat upgrades
-let boatSpeedMultiplier = 1.0;
+// Game state
+let gameState = 'startScreen'; // 'startScreen' or 'playing'
 
 // Key codes for movement
 const KEY_CODES = {
@@ -462,6 +438,9 @@ class Boat {
   }
 
   update() {
+    // Only update boat movement when game is playing
+    if (gameState !== 'playing') return;
+    
     // Handle movement input using keyIsDown for better multi-key support
     // Use !! to coerce to boolean in case keyIsDown returns undefined when canvas is out of focus
     const moveUp = !!keyIsDown(KEY_CODES.W) || !!keyIsDown(KEY_CODES.UP);
@@ -493,14 +472,11 @@ class Boat {
     this.updateDirectionSmooth();
 
     // Move boat with sliding collision
-    const newX = this.x + moveX * this.speed * boatSpeedMultiplier;
-    const newY = this.y + moveY * this.speed * boatSpeedMultiplier;
+    const newX = this.x + moveX * this.speed;
+    const newY = this.y + moveY * this.speed;
 
     // Check collision with land tiles and implement sliding
     this.moveWithSliding(newX, newY, moveX, moveY);
-
-    // Check for damage from collisions
-    this.checkDamage();
 
     // Check for coin collection
     this.collectCoins();
@@ -716,134 +692,78 @@ class Boat {
     }
   }
 
-  checkDamage() {
-    const gridX = Math.floor(this.x / tileSize);
-    const gridY = Math.floor(this.y / tileSize);
-    const currentTile = this.getTileAt(gridX, gridY);
+  checkSectionGeneration() {
+    const currentSectionX = Math.floor(this.x / (tileSize * sectionSize));
+    const currentSectionY = Math.floor(this.y / (tileSize * sectionSize));
     
-    let currentlyCollidingWithRock = false;
-    let currentlyCollidingWithLand = false;
+    const buffer = 20 * tileSize;
+    const edgeDistance = 20;
+
+    // Check if boat is near edge of current section
+    const localX = (this.x / tileSize) % sectionSize;
+    const localY = (this.y / tileSize) % sectionSize;
+
+    const sectionsToGenerate = [];
+
+    if (localX < edgeDistance) sectionsToGenerate.push({x: currentSectionX - 1, y: currentSectionY});
+    if (localX > sectionSize - edgeDistance) sectionsToGenerate.push({x: currentSectionX + 1, y: currentSectionY});
+    if (localY < edgeDistance) sectionsToGenerate.push({x: currentSectionX, y: currentSectionY - 1});
+    if (localY > sectionSize - edgeDistance) sectionsToGenerate.push({x: currentSectionX, y: currentSectionY + 1});
+
+    // Generate corner sections
+    if (localX < edgeDistance && localY < edgeDistance) {
+      sectionsToGenerate.push({x: currentSectionX - 1, y: currentSectionY - 1});
+    }
+    if (localX > sectionSize - edgeDistance && localY < edgeDistance) {
+      sectionsToGenerate.push({x: currentSectionX + 1, y: currentSectionY - 1});
+    }
+    if (localX < edgeDistance && localY > sectionSize - edgeDistance) {
+      sectionsToGenerate.push({x: currentSectionX - 1, y: currentSectionY + 1});
+    }
+    if (localX > sectionSize - edgeDistance && localY > sectionSize - edgeDistance) {
+      sectionsToGenerate.push({x: currentSectionX + 1, y: currentSectionY + 1});
+    }
+
+    for (const section of sectionsToGenerate) {
+      generateSection(section.x, section.y);
+    }
+  }
+
+  draw() {
+    push();
+    translate(this.x, this.y);
     
-    // Check rock collision (8x8 pixel square in center of tile)
-    if (currentTile === TILES.ROCK) {
-      const localX = this.x - (gridX * tileSize);
-      const localY = this.y - (gridY * tileSize);
-      const centerX = 16; // Center of 32px tile
-      const centerY = 16;
+    // Use the smoothly interpolated direction for rendering
+    const renderDirection = Math.round(this.direction);
+    const validDirection = Math.max(0, Math.min(15, renderDirection));
+    
+    if (spritesLoaded && boatSprites && boatSprites[validDirection]) {
+      // Draw the boat sprite
+      imageMode(CENTER);
+      const spriteSize = 32; // Scale up the 16x16 sprite
+      image(boatSprites[validDirection], 0, 0, spriteSize, spriteSize);
       
-      // Check if boat center is within 8x8 square around rock center
-      if (Math.abs(localX - centerX) <= 4 && Math.abs(localY - centerY) <= 4) {
-        currentlyCollidingWithRock = true;
-      }
-    }
-    
-    // Check land collision using existing collision detection
-    if (isLandTile(currentTile)) {
-      if (this.checkLandTileCollision(this.x, this.y, gridX, gridY, currentTile)) {
-        currentlyCollidingWithLand = true;
-      }
-    }
-    
-    // Apply damage only when starting to collide (not continuously)
-    if (currentlyCollidingWithRock && !damageCollisionState.rock) {
-      applyDamage(5); // 5 damage for rock
-    }
-    
-    if (currentlyCollidingWithLand && !damageCollisionState.land) {
-      applyDamage(10); // 10 damage for land
-    }
-    
-    // Update collision states
-    damageCollisionState.rock = currentlyCollidingWithRock;
-    damageCollisionState.land = currentlyCollidingWithLand;
-  }
-
-  // Damage and health functions
-  applyDamage(amount) {
-    if (shield > 0) {
-      const shieldAbsorbed = Math.min(shield, amount);
-      shield -= shieldAbsorbed;
-      amount -= shieldAbsorbed;
+      // Debug: Draw collision circle (uncomment to visualize)
+      // stroke(255, 0, 0, 100);
+      // strokeWeight(1);
+      // noFill();
+      // ellipse(0, 0, this.radius * 2, this.radius * 2);
+    } else {
+      // Fallback to simple drawing if sprites not loaded
+      fill(139, 69, 19);
+      stroke(101, 67, 33);
+      strokeWeight(1);
+      ellipse(0, 0, this.radius * 2, this.radius * 2);
       
-      // If shield absorbed all damage, negate remaining damage
-      if (amount <= 0) {
-        return;
-      }
+      // Add a direction indicator
+      fill(255, 0, 0);
+      const angle = validDirection * (Math.PI * 2) / 16;
+      const dx = Math.cos(angle) * this.radius / 2;
+      const dy = Math.sin(angle) * this.radius / 2;
+      ellipse(dx, dy, 4, 4);
     }
     
-    health -= amount;
-    health = Math.max(0, health);
-    
-    // Check for game over
-    if (health <= 0) {
-      gameState = GAME_STATES.GAME_OVER;
-    }
-  }
-
-  // Shop functions
-  toggleShop() {
-    shop.isOpen = !shop.isOpen;
-  }
-
-  buyItem(index) {
-    const item = shop.items[index];
-    if (score >= item.cost) {
-      score -= item.cost;
-      
-      switch(index) {
-        case 0: // Health Potion
-          health = Math.min(maxHealth, health + 25);
-          break;
-        case 1: // Shield Boost
-          shield = Math.min(maxShield, shield + 50);
-          break;
-        case 2: // Speed Upgrade
-          boatSpeedMultiplier += 0.2;
-          break;
-      }
-    }
-  }
-
-  mousePressed() {
-    if (gameState === GAME_STATES.PLAYING) {
-      // Check shop toggle button
-      const toggleX = width - 40;
-      const toggleY = 100;
-      if (mouseX >= toggleX - 20 && mouseX <= toggleX + 20 && 
-          mouseY >= toggleY - 20 && mouseY <= toggleY + 20) {
-        toggleShop();
-        return;
-      }
-      
-      // Check shop items if shop is open
-      if (shop.isOpen) {
-        const itemHeight = 60;
-        for (let i = 0; i < shop.items.length; i++) {
-          const itemY = shop.y + 40 + i * itemHeight;
-          if (mouseX >= shop.x && mouseX <= shop.x + shop.width &&
-              mouseY >= itemY && mouseY <= itemY + itemHeight - 10) {
-            buyItem(i);
-          }
-        }
-      }
-    }
-  }
-}
-
-function keyPressed() {
-  if (gameState === GAME_STATES.START && mapGenerated) {
-    gameState = GAME_STATES.PLAYING;
-  } else if (gameState === GAME_STATES.GAME_OVER) {
-    // Reset game
-    health = 100;
-    shield = 0;
-    score = 0;
-    boatSpeedMultiplier = 1.0;
-    boat.x = 400;
-    boat.y = 300;
-    damageCollisionState.rock = false;
-    damageCollisionState.land = false;
-    gameState = GAME_STATES.PLAYING;
+    pop();
   }
 }
 
@@ -920,20 +840,6 @@ function preload() {
 function setup() {
   createCanvas(800, 600);
   
-  // Initialize shop after canvas is created
-  shop = {
-    isOpen: false,
-    x: width - 200,
-    y: 100,
-    width: 180,
-    height: 300,
-    items: [
-      { name: "Health Potion", cost: 50, description: "Restore 25 health" },
-      { name: "Shield Boost", cost: 75, description: "Add 50 shield" },
-      { name: "Speed Upgrade", cost: 100, description: "Increase boat speed" }
-    ]
-  };
-  
   // Initialize game objects
   boat = new Boat(400, 300);
   camera = new Camera();
@@ -954,43 +860,155 @@ function setup() {
     }
   }
   
-  // Generate initial sections around boat
-  for (let x = -1; x <= 1; x++) {
-    for (let y = -1; y <= 1; y++) {
-      generateSection(x, y);
-    }
-  }
-  
-  // Ensure boat spawns on water
-  ensureBoatSpawnOnWater();
-  
-  // Report on initial map generation quality
-  validateInitialMapGeneration();
-  
-  // Mark map as generated
-  mapGenerated = true;
+  // Don't generate initial sections yet - wait for game to start
 }
 
 function draw() {
   background(0x30, 0x4c, 0xc4); // HEX #304cc4
   
-  if (gameState === GAME_STATES.START) {
+  if (gameState === 'startScreen') {
     drawStartScreen();
-  } else if (gameState === GAME_STATES.PLAYING) {
-    drawGameplay();
-  } else if (gameState === GAME_STATES.GAME_OVER) {
-    drawGameOverScreen();
+  } else if (gameState === 'playing') {
+    drawGame();
   }
 }
 
-function drawGameplay() {
-  // Health decrease over time (1 health per 60 frames = 1 second at 60fps)
-  healthDecreaseTimer++;
-  if (healthDecreaseTimer >= 60) {
-    applyDamage(1);
-    healthDecreaseTimer = 0;
+function drawStartScreen() {
+  // Draw ocean background with some wave effects
+  background(0x30, 0x4c, 0xc4);
+  
+  // Add some animated wave effects to the background
+  drawBackgroundWaves();
+  
+  // Title
+  fill(255, 215, 0); // Gold color
+  stroke(139, 69, 19); // Brown outline
+  strokeWeight(3);
+  textAlign(CENTER, CENTER);
+  textSize(48);
+  text("Pirates of the Caribbean", width/2, height/2 - 120);
+  
+  // Subtitle
+  fill(255);
+  stroke(0);
+  strokeWeight(2);
+  textSize(24);
+  text("Ocean Adventure", width/2, height/2 - 70);
+  
+  // Instructions
+  fill(255, 255, 255);
+  stroke(0, 0, 0, 150);
+  strokeWeight(1);
+  textSize(18);
+  textAlign(CENTER, CENTER);
+  
+  const instructions = [
+    "How to Play:",
+    "",
+    "• Use WASD or Arrow Keys to sail your ship",
+    "• Navigate through the endless ocean",
+    "• Collect golden coins for points",
+    "• Avoid crashing into land masses",
+    "• Explore procedurally generated islands"
+  ];
+  
+  for (let i = 0; i < instructions.length; i++) {
+    text(instructions[i], width/2, height/2 - 20 + i * 25);
   }
   
+  // Press any key message (with pulsing effect)
+  const pulse = sin(frameCount * 0.1) * 0.3 + 0.7;
+  fill(255, 255, 0, 255 * pulse); // Yellow with pulsing alpha
+  stroke(0);
+  strokeWeight(2);
+  textSize(20);
+  text("Press any key to start sailing!", width/2, height - 80);
+  
+  // Add some pirate-themed decorative elements
+  drawStartScreenDecorations();
+}
+
+function drawBackgroundWaves() {
+  // Draw some subtle animated waves in the background
+  stroke(255, 255, 255, 30);
+  strokeWeight(2);
+  noFill();
+  
+  for (let y = 0; y < height + 100; y += 60) {
+    beginShape();
+    for (let x = -50; x < width + 50; x += 10) {
+      const waveHeight = sin((x + frameCount * 2) * 0.02) * 15 + sin((x + frameCount * 3) * 0.01) * 8;
+      vertex(x, y + waveHeight);
+    }
+    endShape();
+  }
+}
+
+function drawStartScreenDecorations() {
+  // Draw some simple ship silhouettes in the distance
+  fill(0, 0, 0, 100);
+  noStroke();
+  
+  // Ship 1
+  push();
+  translate(150, height/2 + 80);
+  scale(0.5);
+  drawSimpleShip();
+  pop();
+  
+  // Ship 2
+  push();
+  translate(width - 150, height/2 + 60);
+  scale(0.7);
+  drawSimpleShip();
+  pop();
+  
+  // Draw some clouds
+  fill(255, 255, 255, 150);
+  noStroke();
+  drawCloud(120, 100, 1);
+  drawCloud(width - 180, 80, 0.8);
+  drawCloud(width/2 + 200, 120, 1.2);
+}
+
+function drawSimpleShip() {
+  // Simple ship silhouette
+  beginShape();
+  vertex(-15, 0);
+  vertex(-10, -8);
+  vertex(10, -8);
+  vertex(15, 0);
+  vertex(10, 5);
+  vertex(-10, 5);
+  endShape(CLOSE);
+  
+  // Mast
+  rect(-1, -20, 2, 20);
+  
+  // Sail
+  beginShape();
+  vertex(1, -18);
+  vertex(12, -15);
+  vertex(12, -5);
+  vertex(1, -8);
+  endShape(CLOSE);
+}
+
+function drawCloud(x, y, size) {
+  push();
+  translate(x, y);
+  scale(size);
+  
+  ellipse(0, 0, 30, 20);
+  ellipse(-15, 0, 25, 18);
+  ellipse(15, 0, 25, 18);
+  ellipse(-8, -8, 20, 15);
+  ellipse(8, -8, 20, 15);
+  
+  pop();
+}
+
+function drawGame() {
   // Update game objects
   boat.update();
   camera.follow(boat);
@@ -1020,73 +1038,6 @@ function drawGameplay() {
   
   // Draw UI
   drawUI();
-  
-  // Draw shop
-  drawShop();
-}
-
-function drawStartScreen() {
-  // Background
-  fill(0, 0, 0, 150);
-  rect(0, 0, width, height);
-  
-  // Title
-  fill(255, 215, 0);
-  stroke(139, 69, 19);
-  strokeWeight(3);
-  textAlign(CENTER, CENTER);
-  textSize(48);
-  text("Pirates of the Caribbean", width/2, height/2 - 100);
-  
-  // Instructions
-  fill(255);
-  stroke(0);
-  strokeWeight(2);
-  textSize(20);
-  text("Navigate the seas and collect treasure!", width/2, height/2 - 40);
-  
-  textSize(16);
-  text("Controls: WASD or Arrow Keys to move", width/2, height/2);
-  text("Health System: You start with 100 health", width/2, height/2 + 25);
-  text("- Lose 1 health every second", width/2, height/2 + 45);
-  text("- Lose 5 health hitting rocks (center)", width/2, height/2 + 65);
-  text("- Lose 10 health hitting land", width/2, height/2 + 85);
-  text("- Use coins to buy health, shields, and upgrades", width/2, height/2 + 105);
-  
-  // Start prompt - only show when map is generated
-  if (mapGenerated) {
-    fill(255, 255, 0);
-    textSize(24);
-    text("Press any key to start!", width/2, height/2 + 150);
-  } else {
-    fill(255, 255, 255);
-    textSize(18);
-    text("Generating map...", width/2, height/2 + 150);
-  }
-}
-
-function drawGameOverScreen() {
-  // Semi-transparent overlay
-  fill(0, 0, 0, 150);
-  rect(0, 0, width, height);
-  
-  // Game Over text
-  fill(255, 0, 0);
-  stroke(0);
-  strokeWeight(3);
-  textAlign(CENTER, CENTER);
-  textSize(48);
-  text("GAME OVER", width/2, height/2 - 50);
-  
-  // Final score
-  fill(255);
-  textSize(24);
-  text(`Final Score: ${score} coins`, width/2, height/2);
-  
-  // Restart prompt
-  fill(255, 255, 0);
-  textSize(20);
-  text("Press any key to restart", width/2, height/2 + 50);
 }
 
 function drawMap() {
@@ -1529,125 +1480,32 @@ function drawCornerWaves(time, directions) {
 }
 
 function drawUI() {
-  // Health bar background
-  fill(100);
-  stroke(0);
-  strokeWeight(2);
-  rect(20, 20, 200, 20);
-  
-  // Health bar
-  fill(255, 0, 0);
-  noStroke();
-  const healthWidth = (health / maxHealth) * 196;
-  rect(22, 22, healthWidth, 16);
-  
-  // Shield bar background
-  fill(100);
-  stroke(0);
-  strokeWeight(2);
-  rect(20, 45, 200, 15);
-  
-  // Shield bar
-  fill(0, 100, 255);
-  noStroke();
-  const shieldWidth = (shield / maxShield) * 196;
-  rect(22, 47, shieldWidth, 11);
-  
-  // Health text
-  fill(255);
-  stroke(0);
-  strokeWeight(1);
-  textAlign(LEFT);
-  textSize(12);
-  text(`Health: ${health}/${maxHealth}`, 25, 35);
-  text(`Shield: ${shield}/${maxShield}`, 25, 55);
+  // Only draw game UI when actually playing
+  if (gameState !== 'playing') return;
   
   // Score display
-  textSize(20);
-  text(`Coins: ${score}`, 20, 85);
-  
-  // Boat position
-  const boatGridX = Math.floor(boat.x / tileSize);
-  const boatGridY = Math.floor(boat.y / tileSize);
-  textSize(14);
-  text(`Position: (${boatGridX}, ${boatGridY})`, 20, 105);
-  
-  // Speed indicator
-  text(`Speed: ${(boatSpeedMultiplier * 100).toFixed(0)}%`, 20, 125);
-  
-  /* Debug info (commented out)
-  textSize(12);
-  text(`Sprites loaded: ${spritesLoaded}`, 20, 145);
-  text(`Spritesheet: ${spriteSheet ? 'loaded' : 'not loaded'}`, 20, 160);
-  text(`Boat sprites: ${boatSprites.length}`, 20, 175);
-  text(`Boat direction: ${boat.direction.toFixed(2)} -> ${boat.targetDirection}`, 20, 190);
-  */
-}
-
-function drawShop() {
-  // Shop toggle button
-  const toggleX = width - 40;
-  const toggleY = 100;
-  
-  fill(139, 69, 19);
-  stroke(101, 67, 33);
-  strokeWeight(2);
-  rect(toggleX - 20, toggleY - 20, 40, 40);
-  
-  // Arrow
   fill(255);
   stroke(0);
-  strokeWeight(1);
-  textAlign(CENTER, CENTER);
-  textSize(16);
-  text(shop.isOpen ? "←" : "→", toggleX, toggleY);
+  strokeWeight(2);
+  textSize(24);
+  textAlign(LEFT);
+  text(`Coins: ${score}`, 20, 30);
   
-  if (shop.isOpen) {
-    // Shop background
-    fill(139, 69, 19, 200);
-    stroke(101, 67, 33);
-    strokeWeight(3);
-    rect(shop.x, shop.y, shop.width, shop.height);
-    
-    // Shop title
-    fill(255, 215, 0);
-    stroke(0);
-    strokeWeight(2);
-    textAlign(CENTER);
-    textSize(20);
-    text("SHOP", shop.x + shop.width/2, shop.y + 25);
-    
-    // Shop items
-    textAlign(LEFT);
-    const itemHeight = 60;
-    for (let i = 0; i < shop.items.length; i++) {
-      const item = shop.items[i];
-      const itemY = shop.y + 40 + i * itemHeight;
-      
-      // Item background
-      const canAfford = score >= item.cost;
-      if (canAfford) {
-        fill(101, 67, 33);
-        stroke(139, 69, 19);
-      } else {
-        fill(60, 40, 20);
-        stroke(80, 60, 40);
-      }
-      strokeWeight(1);
-      rect(shop.x + 10, itemY, shop.width - 20, itemHeight - 10);
-      
-      // Item text
-      fill(canAfford ? 255 : 150);
-      stroke(0);
-      strokeWeight(1);
-      textSize(14);
-      text(item.name, shop.x + 15, itemY + 15);
-      text(`Cost: ${item.cost} coins`, shop.x + 15, itemY + 30);
-      
-      textSize(11);
-      text(item.description, shop.x + 15, itemY + 45);
-    }
-  }
+  // Debug info
+  textSize(12);
+  text(`Sprites loaded: ${spritesLoaded}`, 20, 60);
+  text(`Spritesheet: ${spriteSheet ? 'loaded' : 'not loaded'}`, 20, 75);
+  text(`Boat sprites: ${boatSprites.length}`, 20, 90);
+  text(`Boat direction: ${boat.direction.toFixed(2)} -> ${boat.targetDirection}`, 20, 105);
+  const boatGridX = Math.floor(boat.x / tileSize);
+  const boatGridY = Math.floor(boat.y / tileSize);
+  text(`Boat grid: (${boatGridX}, ${boatGridY})`, 20, 120);
+  
+  // Instructions
+  textSize(16);
+  text("Use WASD or Arrow Keys to move", 20, height - 60);
+  text("Collect gold coins for points!", 20, height - 40);
+  text("Avoid land tiles", 20, height - 20);
 }
 
 // Add debug function to visualize collision areas (optional - uncomment in drawMap to use)
@@ -1864,4 +1722,29 @@ function validateInitialMapGeneration() {
   if (invalidTiles > 0) {
     console.warn(`Found ${invalidTiles} invalid tiles in initial generation`);
   }
+}
+
+function keyPressed() {
+  if (gameState === 'startScreen') {
+    startGame();
+  }
+}
+
+function startGame() {
+  gameState = 'playing';
+  
+  // Generate initial sections around boat
+  for (let x = -1; x <= 1; x++) {
+    for (let y = -1; y <= 1; y++) {
+      generateSection(x, y);
+    }
+  }
+  
+  // Ensure boat spawns on water
+  ensureBoatSpawnOnWater();
+  
+  // Report on initial map generation quality
+  validateInitialMapGeneration();
+  
+  console.log("Game started!");
 }
