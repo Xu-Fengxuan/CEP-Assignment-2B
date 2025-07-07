@@ -125,93 +125,164 @@ class Boat {
   }
 
   canMoveTo(x, y) {
-    // Use circular collision detection
-    const radius = this.radius;
+    // Use circle-rectangle collision detection
+    return !this.isCollidingWithAnyColliders(x, y);
+  }
+
+  isCollidingWithAnyColliders(x, y) {
+    // Get all nearby tiles to check collision against
+    const boatCircle = { x: x, y: y, radius: this.radius };
     
-    // Check collision in a circle around the boat position
-    const checkRadius = radius + 2; // Small buffer for smoother collision
-    const steps = 8; // Number of points to check around the circle
+    // Calculate the range of tiles to check based on boat position and radius
+    const buffer = this.radius + tileSize; // Extra buffer to ensure we check all relevant tiles
+    const minTileX = Math.floor((x - buffer) / tileSize);
+    const maxTileX = Math.ceil((x + buffer) / tileSize);
+    const minTileY = Math.floor((y - buffer) / tileSize);
+    const maxTileY = Math.ceil((y + buffer) / tileSize);
     
-    for (let i = 0; i < steps; i++) {
-      const angle = (i / steps) * Math.PI * 2;
-      const checkX = x + Math.cos(angle) * checkRadius;
-      const checkY = y + Math.sin(angle) * checkRadius;
-      
-      const gridX = Math.floor(checkX / tileSize);
-      const gridY = Math.floor(checkY / tileSize);
-      const tile = this.getTileAt(gridX, gridY);
-      
-      // If any point on the circle hits a land tile, check specific collision area
-      if (isLandTile(tile)) {
-        if (this.checkLandTileCollision(checkX, checkY, gridX, gridY, tile)) {
-          return false;
+    // Loop through all tiles in the range
+    for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
+      for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
+        const tile = this.getTileAt(tileX, tileY);
+        
+        // Check collision with land tiles
+        if (isLandTile(tile)) {
+          const collider = this.getLandTileCollider(tileX, tileY, tile);
+          if (collider && this.circleRectangleCollision(boatCircle, collider)) {
+            return true;
+          }
+        }
+        
+        // Check collision with rock tiles (full tile collision for movement)
+        if (tile === TILES.ROCK) {
+          const rockCollider = {
+            x: tileX * tileSize,
+            y: tileY * tileSize,
+            width: tileSize,
+            height: tileSize
+          };
+          if (this.circleRectangleCollision(boatCircle, rockCollider)) {
+            return true;
+          }
         }
       }
     }
     
-    // Also check the center point
-    const centerGridX = Math.floor(x / tileSize);
-    const centerGridY = Math.floor(y / tileSize);
-    const centerTile = this.getTileAt(centerGridX, centerGridY);
-    
-    if (isLandTile(centerTile)) {
-      if (this.checkLandTileCollision(x, y, centerGridX, centerGridY, centerTile)) {
-        return false;
-      }
-    }
-    
-    return true;
+    return false;
   }
 
-  checkLandTileCollision(worldX, worldY, gridX, gridY, tileType) {
-    // Convert world coordinates to local tile coordinates (0-32)
-    const localX = worldX - (gridX * tileSize);
-    const localY = worldY - (gridY * tileSize);
+  getLandTileCollider(tileX, tileY, tileType) {
+    const tileWorldX = tileX * tileSize;
+    const tileWorldY = tileY * tileSize;
     
-    // Check collision based on tile type's specific collision area
+    // Return the collision rectangle for each land tile type
     // Corner tiles have colliders in the quarter opposite to their name
     // Side tiles have colliders in the half opposite to their name
     switch(tileType) {
       case TILES.LAND_TOP_LEFT:
-        // Bottom right quadrant only (16-32, 16-32)
-        return localX >= 16 && localY >= 16;
+        // Bottom right quadrant
+        return {
+          x: tileWorldX + 16,
+          y: tileWorldY + 16,
+          width: 16,
+          height: 16
+        };
         
       case TILES.LAND_TOP_MIDDLE:
-        // Bottom half only (0-32, 16-32)
-        return localY >= 16;
+        // Bottom half
+        return {
+          x: tileWorldX,
+          y: tileWorldY + 16,
+          width: 32,
+          height: 16
+        };
         
       case TILES.LAND_TOP_RIGHT:
-        // Bottom left quadrant only (0-16, 16-32)
-        return localX <= 16 && localY >= 16;
+        // Bottom left quadrant
+        return {
+          x: tileWorldX,
+          y: tileWorldY + 16,
+          width: 16,
+          height: 16
+        };
         
       case TILES.LAND_LEFT_MIDDLE:
-        // Right half only (16-32, 0-32)
-        return localX >= 16;
+        // Right half
+        return {
+          x: tileWorldX + 16,
+          y: tileWorldY,
+          width: 16,
+          height: 32
+        };
         
       case TILES.LAND_MIDDLE:
-        // Whole tile (0-32, 0-32)
-        return true;
+        // Whole tile
+        return {
+          x: tileWorldX,
+          y: tileWorldY,
+          width: 32,
+          height: 32
+        };
         
       case TILES.LAND_RIGHT_MIDDLE:
-        // Left half only (0-16, 0-32)
-        return localX <= 16;
+        // Left half
+        return {
+          x: tileWorldX,
+          y: tileWorldY,
+          width: 16,
+          height: 32
+        };
         
       case TILES.LAND_BOTTOM_LEFT:
-        // Top right quadrant only (16-32, 0-16)
-        return localX >= 16 && localY <= 16;
+        // Top right quadrant
+        return {
+          x: tileWorldX + 16,
+          y: tileWorldY,
+          width: 16,
+          height: 16
+        };
         
       case TILES.LAND_BOTTOM_MIDDLE:
-        // Top half only (0-32, 0-16)
-        return localY <= 16;
+        // Top half
+        return {
+          x: tileWorldX,
+          y: tileWorldY,
+          width: 32,
+          height: 16
+        };
         
       case TILES.LAND_BOTTOM_RIGHT:
-        // Top left quadrant only (0-16, 0-16)
-        return localX <= 16 && localY <= 16;
+        // Top left quadrant
+        return {
+          x: tileWorldX,
+          y: tileWorldY,
+          width: 16,
+          height: 16
+        };
         
       default:
         // For any other land tiles, use full collision
-        return true;
+        return {
+          x: tileWorldX,
+          y: tileWorldY,
+          width: 32,
+          height: 32
+        };
     }
+  }
+
+  circleRectangleCollision(circle, rectangle) {
+    // Find the closest point on the rectangle to the circle center
+    const closestX = Math.max(rectangle.x, Math.min(circle.x, rectangle.x + rectangle.width));
+    const closestY = Math.max(rectangle.y, Math.min(circle.y, rectangle.y + rectangle.height));
+    
+    // Calculate the distance between the circle center and this closest point
+    const distanceX = circle.x - closestX;
+    const distanceY = circle.y - closestY;
+    const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+    
+    // Check if the distance is less than the circle's radius
+    return distanceSquared < (circle.radius * circle.radius);
   }
 
   getTileAt(gridX, gridY) {
@@ -307,7 +378,7 @@ class Boat {
   }
 
   checkDamageCollisions() {
-    const currentLandCollision = this.isCollidingWithLand();
+    const currentLandCollision = this.isCollidingWithLandDamage();
     const currentRockCollision = this.isCollidingWithRockCenter();
     
     // Land damage logic
@@ -325,35 +396,29 @@ class Boat {
     damageImmunity.lastRockCollision = currentRockCollision;
   }
 
-  isCollidingWithLand() {
-    // Check if boat is colliding with any land tiles
-    const radius = this.radius;
-    const steps = 8;
+  isCollidingWithLandDamage() {
+    // Use the same collider system as movement but for damage detection
+    const boatCircle = { x: this.x, y: this.y, radius: this.radius };
     
-    for (let i = 0; i < steps; i++) {
-      const angle = (i / steps) * Math.PI * 2;
-      const checkX = this.x + Math.cos(angle) * radius;
-      const checkY = this.y + Math.sin(angle) * radius;
-      
-      const gridX = Math.floor(checkX / tileSize);
-      const gridY = Math.floor(checkY / tileSize);
-      const tile = this.getTileAt(gridX, gridY);
-      
-      if (isLandTile(tile)) {
-        if (this.checkLandTileCollision(checkX, checkY, gridX, gridY, tile)) {
-          return true;
+    // Calculate the range of tiles to check
+    const buffer = this.radius + tileSize;
+    const minTileX = Math.floor((this.x - buffer) / tileSize);
+    const maxTileX = Math.ceil((this.x + buffer) / tileSize);
+    const minTileY = Math.floor((this.y - buffer) / tileSize);
+    const maxTileY = Math.ceil((this.y + buffer) / tileSize);
+    
+    // Loop through all tiles in the range
+    for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
+      for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
+        const tile = this.getTileAt(tileX, tileY);
+        
+        // Check collision with land tiles
+        if (isLandTile(tile)) {
+          const collider = this.getLandTileCollider(tileX, tileY, tile);
+          if (collider && this.circleRectangleCollision(boatCircle, collider)) {
+            return true;
+          }
         }
-      }
-    }
-    
-    // Also check center
-    const centerGridX = Math.floor(this.x / tileSize);
-    const centerGridY = Math.floor(this.y / tileSize);
-    const centerTile = this.getTileAt(centerGridX, centerGridY);
-    
-    if (isLandTile(centerTile)) {
-      if (this.checkLandTileCollision(this.x, this.y, centerGridX, centerGridY, centerTile)) {
-        return true;
       }
     }
     
@@ -361,39 +426,38 @@ class Boat {
   }
 
   isCollidingWithRockCenter() {
-    // Check if boat is colliding with the center 8 pixels of a rock tile
-    const centerRadius = 8; // Center 8 pixels radius
+    // Check collision with rock center (8 pixel radius from center)
+    const boatCircle = { x: this.x, y: this.y, radius: this.radius };
     
-    // Check multiple points around boat's collision circle
-    const steps = 8;
-    for (let i = 0; i < steps; i++) {
-      const angle = (i / steps) * Math.PI * 2;
-      const checkX = this.x + Math.cos(angle) * this.radius;
-      const checkY = this.y + Math.sin(angle) * this.radius;
-      
-      if (this.isPointInRockCenter(checkX, checkY)) {
-        return true;
+    // Calculate the range of tiles to check
+    const buffer = this.radius + tileSize;
+    const minTileX = Math.floor((this.x - buffer) / tileSize);
+    const maxTileX = Math.ceil((this.x + buffer) / tileSize);
+    const minTileY = Math.floor((this.y - buffer) / tileSize);
+    const maxTileY = Math.ceil((this.y + buffer) / tileSize);
+    
+    // Loop through all tiles in the range
+    for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
+      for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
+        const tile = this.getTileAt(tileX, tileY);
+        
+        if (tile === TILES.ROCK) {
+          // Create a circular collider for the center 8 pixels of the rock
+          const rockCenterX = tileX * tileSize + tileSize / 2;
+          const rockCenterY = tileY * tileSize + tileSize / 2;
+          const rockCenterRadius = 8;
+          
+          // Check circle-to-circle collision
+          const distance = Math.sqrt(
+            (this.x - rockCenterX) ** 2 + 
+            (this.y - rockCenterY) ** 2
+          );
+          
+          if (distance < (this.radius + rockCenterRadius)) {
+            return true;
+          }
+        }
       }
-    }
-    
-    // Also check boat center
-    return this.isPointInRockCenter(this.x, this.y);
-  }
-
-  isPointInRockCenter(x, y) {
-    const gridX = Math.floor(x / tileSize);
-    const gridY = Math.floor(y / tileSize);
-    const tile = this.getTileAt(gridX, gridY);
-    
-    if (tile === TILES.ROCK) {
-      // Check if point is within center 8 pixels of the rock tile
-      const tileX = gridX * tileSize;
-      const tileY = gridY * tileSize;
-      const tileCenterX = tileX + tileSize / 2;
-      const tileCenterY = tileY + tileSize / 2;
-      
-      const distance = Math.sqrt((x - tileCenterX) ** 2 + (y - tileCenterY) ** 2);
-      return distance <= 8; // Center 8 pixels radius
     }
     
     return false;
@@ -418,6 +482,9 @@ class Boat {
       // strokeWeight(1);
       // noFill();
       // ellipse(0, 0, this.radius * 2, this.radius * 2);
+      
+      // Debug: Draw colliders (uncomment to visualize)
+      // this.debugDrawColliders();
     } else {
       // Fallback to simple drawing if sprites not loaded
       fill(139, 69, 19);
@@ -434,5 +501,46 @@ class Boat {
     }
     
     pop();
+  }
+
+  debugDrawColliders() {
+    // Draw colliders for nearby tiles (for debugging)
+    const buffer = this.radius + tileSize;
+    const minTileX = Math.floor((this.x - buffer) / tileSize);
+    const maxTileX = Math.ceil((this.x + buffer) / tileSize);
+    const minTileY = Math.floor((this.y - buffer) / tileSize);
+    const maxTileY = Math.ceil((this.y + buffer) / tileSize);
+    
+    for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
+      for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
+        const tile = this.getTileAt(tileX, tileY);
+        
+        if (isLandTile(tile)) {
+          const collider = this.getLandTileCollider(tileX, tileY, tile);
+          if (collider) {
+            push();
+            translate(-this.x, -this.y); // Undo boat translation
+            stroke(255, 0, 0, 150);
+            strokeWeight(2);
+            noFill();
+            rect(collider.x, collider.y, collider.width, collider.height);
+            pop();
+          }
+        }
+        
+        if (tile === TILES.ROCK) {
+          // Draw rock center collision area
+          const rockCenterX = tileX * tileSize + tileSize / 2;
+          const rockCenterY = tileY * tileSize + tileSize / 2;
+          push();
+          translate(-this.x, -this.y); // Undo boat translation
+          stroke(0, 255, 255, 150);
+          strokeWeight(2);
+          noFill();
+          ellipse(rockCenterX, rockCenterY, 16, 16); // 8 pixel radius = 16 diameter
+          pop();
+        }
+      }
+    }
   }
 }
