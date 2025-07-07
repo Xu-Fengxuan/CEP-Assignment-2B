@@ -296,6 +296,7 @@ function drawBoatStats() {
   
   text(`Position: (${gridX}, ${gridY})`, statsX, statsY);
   text(`Speed: ${boat.speed}`, statsX, statsY + 20);
+  text('Frame Rate: ' + frameRate().toFixed(2), statsX, statsY + 40);
 }
 
 function drawShop() {
