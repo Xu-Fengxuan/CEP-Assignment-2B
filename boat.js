@@ -47,6 +47,12 @@ class Boat {
     const newX = this.x + moveX * this.speed;
     const newY = this.y + moveY * this.speed;
 
+    // Reset land immunity if player is not trying to move
+    if (moveX === 0 && moveY === 0) {
+      damageImmunity.lastLandCollision = false;
+      damageImmunity.lastRockCollision = false;
+    }
+
     // Check collision with land tiles and implement sliding
     this.moveWithSliding(newX, newY, moveX, moveY);
 
@@ -96,7 +102,17 @@ class Boat {
     if (this.canMoveTo(targetX, targetY)) {
       this.x = targetX;
       this.y = targetY;
+      // Reset land immunity when we can move freely to our target
+      damageImmunity.lastLandCollision = false;
       return;
+    }
+    
+    // If we can't move to target position, check if it's because of land collision
+    // and apply damage if so
+    if (this.isCollidingWithLand(targetX, targetY) && !damageImmunity.lastLandCollision) {
+      takeDamage(BOAT_STATS.LAND_DAMAGE, 'land');
+      damageImmunity.lastLandCollision = true;
+      console.log("Land collision damage taken!");
     }
     
     // If full movement is blocked, try sliding along walls
@@ -122,53 +138,12 @@ class Boat {
       this.y = verticalY;
     }
     // If neither direction is possible, boat stays in place
+    // Don't reset immunity here - only reset when we can move to our intended target
   }
 
   canMoveTo(x, y) {
     // Use circle-rectangle collision detection
-    return !this.isCollidingWithAnyColliders(x, y);
-  }
-
-  isCollidingWithAnyColliders(x, y) {
-    // Get all nearby tiles to check collision against
-    const boatCircle = { x: x, y: y, radius: this.radius };
-    
-    // Calculate the range of tiles to check based on boat position and radius
-    const buffer = this.radius + tileSize; // Extra buffer to ensure we check all relevant tiles
-    const minTileX = Math.floor((x - buffer) / tileSize);
-    const maxTileX = Math.ceil((x + buffer) / tileSize);
-    const minTileY = Math.floor((y - buffer) / tileSize);
-    const maxTileY = Math.ceil((y + buffer) / tileSize);
-    
-    // Loop through all tiles in the range
-    for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
-      for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
-        const tile = this.getTileAt(tileX, tileY);
-        
-        // Check collision with land tiles
-        if (isLandTile(tile)) {
-          const collider = this.getLandTileCollider(tileX, tileY, tile);
-          if (collider && this.circleRectangleCollision(boatCircle, collider)) {
-            return true;
-          }
-        }
-        
-        // Check collision with rock tiles (full tile collision for movement)
-        if (tile === TILES.ROCK) {
-          const rockCollider = {
-            x: tileX * tileSize,
-            y: tileY * tileSize,
-            width: tileSize,
-            height: tileSize
-          };
-          if (this.circleRectangleCollision(boatCircle, rockCollider)) {
-            return true;
-          }
-        }
-      }
-    }
-    
-    return false;
+    return !this.isCollidingWithLand(x, y);
   }
 
   getLandTileCollider(tileX, tileY, tileType) {
@@ -378,34 +353,31 @@ class Boat {
   }
 
   checkDamageCollisions() {
-    const currentLandCollision = this.isCollidingWithLandDamage();
     const currentRockCollision = this.isCollidingWithRockCenter();
     
-    // Land damage logic
-    if (currentLandCollision && !damageImmunity.lastLandCollision) {
-      takeDamage(BOAT_STATS.LAND_DAMAGE, 'land');
-    }
+    console.log(`Damage check - Rock: ${currentRockCollision}, LastRock: ${damageImmunity.lastRockCollision}`);
     
-    // Rock damage logic
+    // Rock damage logic - only take damage when starting to collide  
     if (currentRockCollision && !damageImmunity.lastRockCollision) {
       takeDamage(BOAT_STATS.ROCK_DAMAGE, 'rock');
+      damageImmunity.lastRockCollision = true;
+      console.log("Rock collision damage taken!");
     }
     
-    // Update last collision states for immunity
-    damageImmunity.lastLandCollision = currentLandCollision;
-    damageImmunity.lastRockCollision = currentRockCollision;
+    // Don't reset rock immunity here - let it reset when player stops moving
+    // This prevents continuous damage from flickering collision detection
   }
 
-  isCollidingWithLandDamage() {
-    // Use the same collider system as movement but for damage detection
-    const boatCircle = { x: this.x, y: this.y, radius: this.radius };
+  isCollidingWithLand(x, y) {
+    // Get all nearby tiles to check collision against
+    const boatCircle = { x: x, y: y, radius: this.radius };
     
-    // Calculate the range of tiles to check
-    const buffer = this.radius + tileSize;
-    const minTileX = Math.floor((this.x - buffer) / tileSize);
-    const maxTileX = Math.ceil((this.x + buffer) / tileSize);
-    const minTileY = Math.floor((this.y - buffer) / tileSize);
-    const maxTileY = Math.ceil((this.y + buffer) / tileSize);
+    // Calculate the range of tiles to check based on boat position and radius
+    const buffer = this.radius + tileSize; // Extra buffer to ensure we check all relevant tiles
+    const minTileX = Math.floor((x - buffer) / tileSize);
+    const maxTileX = Math.ceil((x + buffer) / tileSize);
+    const minTileY = Math.floor((y - buffer) / tileSize);
+    const maxTileY = Math.ceil((y + buffer) / tileSize);
     
     // Loop through all tiles in the range
     for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
