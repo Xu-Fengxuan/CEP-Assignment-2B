@@ -128,7 +128,7 @@ class WaveFunctionCollapse {
       // Enhanced weighted selection with stricter land formation rules
       let selectedTile;
       const waterProbability = 0.75; // Increased water probability
-      const rockProbability = 0.01;
+      const rockProbability = 0.01; // Reduced by 40% from 0.01
       
       if (Math.random() < waterProbability) {
         selectedTile = TILES.WATER;

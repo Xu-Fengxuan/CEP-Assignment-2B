@@ -626,7 +626,7 @@ function drawUI() {
   if (gameState !== GAME_STATES.PLAYING) return;
   
   // Score display (positioned to avoid shop overlap)
-  const coinDisplayX = shopExpanded ? width - shopWidth - 220 : width - shopCollapsedWidth - 220;
+  const coinDisplayX = shopExpanded ? width - shopWidth - 100 : width - shopCollapsedWidth - 100;
   fill(255);
   stroke(0);
   strokeWeight(2);
@@ -638,8 +638,8 @@ function drawUI() {
   textSize(16);
   textAlign(LEFT);
   text("Use WASD or Arrow Keys to move", 20, height - 60);
-  text("Collect gold coins for points!", 20, height - 40);
-  text("Avoid land tiles and rock centers!", 20, height - 20);
+  text("Collect gold coins!", 20, height - 40);
+  text("Avoid land and rocks!", 20, height - 20);
 }
 
 // Add debug function to visualize collision areas (optional - uncomment in drawMap to use)

@@ -190,7 +190,7 @@ function drawStartScreen() {
     "• Collect coins to increase your score",
     "• Your health slowly decreases over time",
     "• Land contact deals 10 damage",
-    "• Rock center contact deals 2 damage",
+    "• Rock contact deals 2 damage",
     "• Shield blocks overflow damage when depleted"
   ];
   
