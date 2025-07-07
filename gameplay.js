@@ -178,7 +178,7 @@ function drawStartScreen() {
   fill(255, 255, 255);
   textAlign(CENTER, CENTER);
   textSize(48);
-  text("Pirates of the Caribbean", width / 2, height / 2 - 110);
+  text("Pirates of the Caribbean", width / 2, height / 2 - 145);
   
   // Game description
   textSize(16);
@@ -195,12 +195,12 @@ function drawStartScreen() {
   ];
   
   for (let i = 0; i < description.length; i++) {
-    text(description[i], width / 2, height / 2 - 50 + i * 25);
+    text(description[i], width / 2, height / 2 - 95 + i * 25);
   }
   
   // Press any key instruction
   textSize(24);
-  text("Press any key to start", width / 2, height / 2 + 185);
+  text("Press any key or click to start", width / 2, height / 2 + 150);
 }
 
 function drawDeathScreen() {
@@ -224,7 +224,7 @@ function drawDeathScreen() {
   
   // Restart instruction
   textSize(20);
-  text("Press any key to restart", width / 2, height / 2 + 60);
+  text("Press any key or click to restart", width / 2, height / 2 + 60);
 }
 
 function drawHealthShieldBars() {

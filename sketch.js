@@ -709,8 +709,18 @@ function keyPressed() {
   return false; // Prevent default behavior
 }
 
-// Handle mouse clicks for shop interaction
+// Handle mouse clicks for shop interaction and game start
 function mousePressed() {
-  handleShopClick(mouseX, mouseY);
+  // Handle game start when clicking in start or death state
+  if (gameState === GAME_STATES.START || gameState === GAME_STATES.DEATH) {
+    handleKeyPress(); // Reuse the existing key press logic
+    return false;
+  }
+  
+  // Handle shop clicks during gameplay
+  if (gameState === GAME_STATES.PLAYING) {
+    handleShopClick(mouseX, mouseY);
+  }
+  
   return false; // Prevent default behavior
 }
