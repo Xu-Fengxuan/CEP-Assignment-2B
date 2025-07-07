@@ -10,6 +10,9 @@ class Boat {
   }
 
   update() {
+    // Only update if game is in playing state
+    if (gameState !== GAME_STATES.PLAYING) return;
+    
     // Handle movement input using keyIsDown for better multi-key support
     // Use !! to coerce to boolean in case keyIsDown returns undefined when canvas is out of focus
     const moveUp = !!keyIsDown(KEY_CODES.W) || !!keyIsDown(KEY_CODES.UP);
@@ -49,6 +52,9 @@ class Boat {
 
     // Check for coin collection
     this.collectCoins();
+
+    // Check for damage-causing collisions
+    this.checkDamageCollisions();
 
     // Generate new sections if needed
     this.checkSectionGeneration();
@@ -163,6 +169,8 @@ class Boat {
     const localY = worldY - (gridY * tileSize);
     
     // Check collision based on tile type's specific collision area
+    // Corner tiles have colliders in the quarter opposite to their name
+    // Side tiles have colliders in the half opposite to their name
     switch(tileType) {
       case TILES.LAND_TOP_LEFT:
         // Bottom right quadrant only (16-32, 16-32)
@@ -296,6 +304,99 @@ class Boat {
     for (const section of sectionsToGenerate) {
       generateSection(section.x, section.y);
     }
+  }
+
+  checkDamageCollisions() {
+    const currentLandCollision = this.isCollidingWithLand();
+    const currentRockCollision = this.isCollidingWithRockCenter();
+    
+    // Land damage logic
+    if (currentLandCollision && !damageImmunity.lastLandCollision) {
+      takeDamage(BOAT_STATS.LAND_DAMAGE, 'land');
+    }
+    
+    // Rock damage logic
+    if (currentRockCollision && !damageImmunity.lastRockCollision) {
+      takeDamage(BOAT_STATS.ROCK_DAMAGE, 'rock');
+    }
+    
+    // Update last collision states for immunity
+    damageImmunity.lastLandCollision = currentLandCollision;
+    damageImmunity.lastRockCollision = currentRockCollision;
+  }
+
+  isCollidingWithLand() {
+    // Check if boat is colliding with any land tiles
+    const radius = this.radius;
+    const steps = 8;
+    
+    for (let i = 0; i < steps; i++) {
+      const angle = (i / steps) * Math.PI * 2;
+      const checkX = this.x + Math.cos(angle) * radius;
+      const checkY = this.y + Math.sin(angle) * radius;
+      
+      const gridX = Math.floor(checkX / tileSize);
+      const gridY = Math.floor(checkY / tileSize);
+      const tile = this.getTileAt(gridX, gridY);
+      
+      if (isLandTile(tile)) {
+        if (this.checkLandTileCollision(checkX, checkY, gridX, gridY, tile)) {
+          return true;
+        }
+      }
+    }
+    
+    // Also check center
+    const centerGridX = Math.floor(this.x / tileSize);
+    const centerGridY = Math.floor(this.y / tileSize);
+    const centerTile = this.getTileAt(centerGridX, centerGridY);
+    
+    if (isLandTile(centerTile)) {
+      if (this.checkLandTileCollision(this.x, this.y, centerGridX, centerGridY, centerTile)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  isCollidingWithRockCenter() {
+    // Check if boat is colliding with the center 8 pixels of a rock tile
+    const centerRadius = 8; // Center 8 pixels radius
+    
+    // Check multiple points around boat's collision circle
+    const steps = 8;
+    for (let i = 0; i < steps; i++) {
+      const angle = (i / steps) * Math.PI * 2;
+      const checkX = this.x + Math.cos(angle) * this.radius;
+      const checkY = this.y + Math.sin(angle) * this.radius;
+      
+      if (this.isPointInRockCenter(checkX, checkY)) {
+        return true;
+      }
+    }
+    
+    // Also check boat center
+    return this.isPointInRockCenter(this.x, this.y);
+  }
+
+  isPointInRockCenter(x, y) {
+    const gridX = Math.floor(x / tileSize);
+    const gridY = Math.floor(y / tileSize);
+    const tile = this.getTileAt(gridX, gridY);
+    
+    if (tile === TILES.ROCK) {
+      // Check if point is within center 8 pixels of the rock tile
+      const tileX = gridX * tileSize;
+      const tileY = gridY * tileSize;
+      const tileCenterX = tileX + tileSize / 2;
+      const tileCenterY = tileY + tileSize / 2;
+      
+      const distance = Math.sqrt((x - tileCenterX) ** 2 + (y - tileCenterY) ** 2);
+      return distance <= 8; // Center 8 pixels radius
+    }
+    
+    return false;
   }
 
   draw() {

@@ -97,19 +97,59 @@ function setup() {
   
   // Report on initial map generation quality
   validateInitialMapGeneration();
+  
+  // Initialize gameplay system after map generation
+  initializeGameplay();
+  gameInitialized = true;
 }
 
 function draw() {
   background(0x30, 0x4c, 0xc4); // HEX #304cc4
   
-  // Update game objects
-  boat.update();
-  camera.follow(boat);
-  camera.update();
+  // Handle different game states
+  if (gameState === GAME_STATES.START) {
+    // Still show the game world being generated
+    if (gameInitialized) {
+      // Apply camera transform
+      push();
+      camera.apply();
+      
+      // Draw map
+      drawMap();
+      
+      // Draw coins
+      for (const coin of coins) {
+        coin.draw();
+      }
+      
+      // Draw boat
+      boat.draw();
+      
+      pop();
+      
+      // Draw start screen overlay
+      drawStartScreen();
+    }
+    return;
+  }
   
-  // Update coins
-  for (const coin of coins) {
-    coin.update();
+  if (gameState === GAME_STATES.PLAYING) {
+    // Update game objects
+    boat.update();
+    camera.follow(boat);
+    camera.update();
+    
+    // Update coins
+    for (const coin of coins) {
+      coin.update();
+    }
+    
+    // Update gameplay mechanics
+    updateGameplay();
+  } else {
+    // Still update camera to follow boat even in non-playing states for visual consistency
+    camera.follow(boat);
+    camera.update();
   }
   
   // Apply camera transform
@@ -131,6 +171,16 @@ function draw() {
   
   // Draw UI
   drawUI();
+  
+  // Draw gameplay UI elements
+  drawHealthShieldBars();
+  drawBoatStats();
+  drawShop();
+  
+  // Draw death screen if needed
+  if (gameState === GAME_STATES.DEATH) {
+    drawDeathScreen();
+  }
 }
 
 function drawMap() {
@@ -573,29 +623,23 @@ function drawCornerWaves(time, directions) {
 }
 
 function drawUI() {
-  // Score display
+  if (gameState !== GAME_STATES.PLAYING) return;
+  
+  // Score display (positioned to avoid shop overlap)
+  const coinDisplayX = shopExpanded ? width - shopWidth - 220 : width - shopCollapsedWidth - 220;
   fill(255);
   stroke(0);
   strokeWeight(2);
   textSize(24);
   textAlign(LEFT);
-  text(`Coins: ${score}`, 20, 30);
+  text(`Coins: ${score}`, coinDisplayX, 30);
   
-  // Debug info
-  textSize(12);
-  text(`Sprites loaded: ${spritesLoaded}`, 20, 60);
-  text(`Spritesheet: ${spriteSheet ? 'loaded' : 'not loaded'}`, 20, 75);
-  text(`Boat sprites: ${boatSprites.length}`, 20, 90);
-  text(`Boat direction: ${boat.direction.toFixed(2)} -> ${boat.targetDirection}`, 20, 105);
-  const boatGridX = Math.floor(boat.x / tileSize);
-  const boatGridY = Math.floor(boat.y / tileSize);
-  text(`Boat grid: (${boatGridX}, ${boatGridY})`, 20, 120);
-  
-  // Instructions
+  // Instructions at bottom
   textSize(16);
+  textAlign(LEFT);
   text("Use WASD or Arrow Keys to move", 20, height - 60);
   text("Collect gold coins for points!", 20, height - 40);
-  text("Avoid land tiles", 20, height - 20);
+  text("Avoid land tiles and rock centers!", 20, height - 20);
 }
 
 // Add debug function to visualize collision areas (optional - uncomment in drawMap to use)
@@ -657,4 +701,16 @@ function drawTileCollisionDebug(x, y, tileType) {
   }
   
   pop();
+}
+
+// Handle key press events for game state management
+function keyPressed() {
+  handleKeyPress();
+  return false; // Prevent default behavior
+}
+
+// Handle mouse clicks for shop interaction
+function mousePressed() {
+  handleShopClick(mouseX, mouseY);
+  return false; // Prevent default behavior
 }

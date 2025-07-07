@@ -770,3 +770,4 @@ function validateInitialMapGeneration() {
   if (invalidTiles > 0) {
     console.warn(`Found ${invalidTiles} invalid tiles in initial generation`);
   }
+}
