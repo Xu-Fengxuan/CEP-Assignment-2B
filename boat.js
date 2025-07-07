@@ -107,7 +107,7 @@ class Boat {
     if (this.isCollidingWithLand(targetX, targetY) && !damageImmunity.lastLandCollision) {
       takeDamage(BOAT_STATS.LAND_DAMAGE, 'land');
       damageImmunity.lastLandCollision = true;
-      console.log("Land collision damage taken!");
+      //console.log("Land collision damage taken!");
     }
     
     // If full movement is blocked, try sliding along walls
@@ -350,19 +350,19 @@ class Boat {
   checkDamageCollisions() {
     const currentRockCollision = this.isCollidingWithRockCenter();
     
-    console.log(`Damage check - Rock: ${currentRockCollision}, LastRock: ${damageImmunity.lastRockCollision}`);
+    //console.log(`Damage check - Rock: ${currentRockCollision}, LastRock: ${damageImmunity.lastRockCollision}`);
     
     // Rock damage logic - only take damage when starting to collide  
     if (currentRockCollision && !damageImmunity.lastRockCollision) {
       takeDamage(BOAT_STATS.ROCK_DAMAGE, 'rock');
       damageImmunity.lastRockCollision = true;
-      console.log("Rock collision damage taken!");
+      //console.log("Rock collision damage taken!");
     }
     
     // Reset rock immunity only when no longer colliding with rocks
     if (!currentRockCollision && damageImmunity.lastRockCollision) {
       damageImmunity.lastRockCollision = false;
-      console.log("Rock immunity reset - no longer colliding");
+      //console.log("Rock immunity reset - no longer colliding");
     }
     
     // Note: Land immunity is handled in moveWithSliding() since land damage

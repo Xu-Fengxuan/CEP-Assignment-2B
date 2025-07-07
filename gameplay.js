@@ -166,7 +166,7 @@ function takeDamage(amount, source) {
     boatHealth = Math.max(0, boatHealth); // Clamp to 0
   }
   
-  console.log(`Damage taken: ${amount} from ${source}. Health: ${boatHealth}, Shield: ${boatShield}`);
+  //console.log(`Damage taken: ${amount} from ${source}. Health: ${boatHealth}, Shield: ${boatShield}`);
 }
 
 function drawStartScreen() {
