@@ -47,12 +47,6 @@ class Boat {
     const newX = this.x + moveX * this.speed;
     const newY = this.y + moveY * this.speed;
 
-    // Reset land immunity if player is not trying to move
-    if (moveX === 0 && moveY === 0) {
-      damageImmunity.lastLandCollision = false;
-      damageImmunity.lastRockCollision = false;
-    }
-
     // Check collision with land tiles and implement sliding
     this.moveWithSliding(newX, newY, moveX, moveY);
 
@@ -102,7 +96,8 @@ class Boat {
     if (this.canMoveTo(targetX, targetY)) {
       this.x = targetX;
       this.y = targetY;
-      // Reset land immunity when we can move freely to our target
+      // Reset land immunity only when we can move freely to our intended target
+      // This means we're no longer blocked by land
       damageImmunity.lastLandCollision = false;
       return;
     }
@@ -364,8 +359,14 @@ class Boat {
       console.log("Rock collision damage taken!");
     }
     
-    // Don't reset rock immunity here - let it reset when player stops moving
-    // This prevents continuous damage from flickering collision detection
+    // Reset rock immunity only when no longer colliding with rocks
+    if (!currentRockCollision && damageImmunity.lastRockCollision) {
+      damageImmunity.lastRockCollision = false;
+      console.log("Rock immunity reset - no longer colliding");
+    }
+    
+    // Note: Land immunity is handled in moveWithSliding() since land damage
+    // is triggered by movement attempts, not just position-based collision
   }
 
   isCollidingWithLand(x, y) {
@@ -414,10 +415,10 @@ class Boat {
         const tile = this.getTileAt(tileX, tileY);
         
         if (tile === TILES.ROCK) {
-          // Create a circular collider for the center 8 pixels of the rock
+          // Create a circular collider for the center 6 pixels of the rock
           const rockCenterX = tileX * tileSize + tileSize / 2;
           const rockCenterY = tileY * tileSize + tileSize / 2;
-          const rockCenterRadius = 8;
+          const rockCenterRadius = 6;
           
           // Check circle-to-circle collision
           const distance = Math.sqrt(

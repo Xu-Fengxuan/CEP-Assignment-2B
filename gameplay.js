@@ -205,7 +205,7 @@ function drawStartScreen() {
 
 function drawDeathScreen() {
   // Fade in death screen
-  deathScreenAlpha = Math.min(255, deathScreenAlpha + 5);
+  deathScreenAlpha = Math.min(255, deathScreenAlpha + 8);
   
   // Semi-transparent background
   fill(0, 0, 0, deathScreenAlpha * 0.8);
