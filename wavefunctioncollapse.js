@@ -617,34 +617,7 @@ function ensureBoatSpawnOnWater() {
   }
 }
 
-function validateInitialMapGeneration() {
-  let totalTiles = 0;
-  let invalidTiles = 0;
-  
-  // Check all generated sections
-  for (const sectionKey in mapSections) {
-    const [sectionX, sectionY] = sectionKey.split(',').map(Number);
-    const sectionData = mapSections[sectionKey];
-    
-    for (let y = 0; y < sectionSize; y++) {
-      for (let x = 0; x < sectionSize; x++) {
-        totalTiles++;
-        const currentTile = sectionData[y][x];
-        
-        if (!isValidTilePlacement(sectionX, sectionY, x, y, currentTile)) {
-          invalidTiles++;
-        }
-      }
-    }
-  }
-  
-  console.log(`Initial map validation: ${totalTiles - invalidTiles}/${totalTiles} tiles valid (${((totalTiles - invalidTiles) / totalTiles * 100).toFixed(1)}%)`);
-  
-  if (invalidTiles > 0) {
-    console.warn(`Found ${invalidTiles} invalid tiles in initial generation`);
-  }
-
-  function validateAndFixSection(sectionX, sectionY) {
+function validateAndFixSection(sectionX, sectionY) {
   const sectionKey = `${sectionX},${sectionY}`;
   const sectionData = mapSections[sectionKey];
   let fixedTiles = 0;
