@@ -40,7 +40,7 @@ const SHOP_ITEMS = {
   HEALTH_POTION: {
     name: "Health Potion",
     description: "Restore 20 health",
-    cost: 20,
+    cost: 10,
     effect: () => {
       boatHealth = Math.min(BOAT_STATS.MAX_HEALTH, boatHealth + 20);
     }
@@ -48,7 +48,7 @@ const SHOP_ITEMS = {
   SHIELD_DEVICE: {
     name: "Shield Device",
     description: "Restore 20 shield",
-    cost: 25,
+    cost: 15,
     effect: () => {
       boatShield = Math.min(BOAT_STATS.MAX_SHIELD, boatShield + 20);
     }
