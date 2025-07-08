@@ -70,13 +70,13 @@ const SHOP_ITEMS = {
   },
   SPEED_BOOSTER: {
     name: "Speed Booster",
-    description: "Increase speed by 1",
+    description: "Increase speed by 2",
     cost: 50,
     maxPurchases: 5,
     purchased: 0,
     effect: () => {
       if (SHOP_ITEMS.SPEED_BOOSTER.purchased < SHOP_ITEMS.SPEED_BOOSTER.maxPurchases) {
-        boat.speed += 1;
+        boat.speed += 2;
         SHOP_ITEMS.SPEED_BOOSTER.purchased++;
       }
     }
