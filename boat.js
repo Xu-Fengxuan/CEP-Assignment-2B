@@ -304,6 +304,7 @@ class Boat {
       if (distance < this.radius) {
         coins.splice(i, 1);
         score += 10;
+        totalScore += 10;
       }
     }
   }
