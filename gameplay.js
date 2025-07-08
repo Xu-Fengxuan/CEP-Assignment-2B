@@ -22,9 +22,9 @@ const BOAT_STATS = {
 // Damage effect parameters
 const DAMAGE_EFFECTS = {
   // Red tint effect
-  PASSIVE_TINT_ALPHA: 10,  // Light red tint for passive damage
-  ROCK_TINT_ALPHA: 20,     // Medium red tint for rock collision
-  LAND_TINT_ALPHA: 40,    // Strong red tint for land collision
+  PASSIVE_TINT_ALPHA: 5,  // Light red tint for passive damage
+  ROCK_TINT_ALPHA: 10,     // Medium red tint for rock collision
+  LAND_TINT_ALPHA: 20,    // Strong red tint for land collision
   TINT_DURATION: 5,       // How long the tint effect lasts in frames
   
   // Screen shake effect
@@ -522,7 +522,7 @@ function drawDamageEffects() {
     noStroke();
     
     // Use a gradient from edge to center for a more natural effect
-    const gradientSteps = 20;
+    const gradientSteps = 10;
     for (let i = 0; i < gradientSteps; i++) {
       const ratio = i / gradientSteps;
       const alpha = damageEffect.tintAlpha * (1 - ratio);
@@ -532,7 +532,7 @@ function drawDamageEffects() {
       fill(255, 0, 0, alpha);
       
       // Draw a frame getting smaller toward the center
-      const frameSize = ratio * 150; // Maximum frame size is 150px
+      const frameSize = ratio * 50; // Maximum frame size is 150px
       rect(0, 0, width, frameSize); // Top
       rect(0, height - frameSize, width, frameSize); // Bottom
       rect(0, frameSize, frameSize, height - frameSize * 2); // Left
