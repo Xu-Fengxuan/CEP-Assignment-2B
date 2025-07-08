@@ -24,14 +24,14 @@ const DAMAGE_EFFECTS = {
   // Red tint effect
   PASSIVE_TINT_ALPHA: 5,  // Light red tint for passive damage
   ROCK_TINT_ALPHA: 10,     // Medium red tint for rock collision
-  LAND_TINT_ALPHA: 20,    // Strong red tint for land collision
+  LAND_TINT_ALPHA: 15,    // Strong red tint for land collision
   TINT_DURATION: 5,       // How long the tint effect lasts in frames
   
   // Screen shake effect
   ROCK_SHAKE_AMOUNT: 2,    // Small shake for rock collision
   LAND_SHAKE_AMOUNT: 5,   // Larger shake for land collision
   SHAKE_DURATION: 4,      // How long the shake effect lasts in frames
-  SHAKE_FALLOFF: 0.8      // How quickly the shake effect decreases (lower = faster)
+  SHAKE_FALLOFF: 0.75      // How quickly the shake effect decreases (lower = faster)
 };
 
 let boatHealth = BOAT_STATS.STARTING_HEALTH;
@@ -532,7 +532,7 @@ function drawDamageEffects() {
       fill(255, 0, 0, alpha);
       
       // Draw a frame getting smaller toward the center
-      const frameSize = ratio * 50; // Maximum frame size is 150px
+      const frameSize = ratio * 40; // Maximum frame size is 150px
       rect(0, 0, width, frameSize); // Top
       rect(0, height - frameSize, width, frameSize); // Bottom
       rect(0, frameSize, frameSize, height - frameSize * 2); // Left
