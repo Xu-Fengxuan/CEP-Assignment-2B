@@ -19,6 +19,21 @@ const BOAT_STATS = {
   ROCK_DAMAGE: 2
 };
 
+// Damage effect parameters
+const DAMAGE_EFFECTS = {
+  // Red tint effect
+  PASSIVE_TINT_ALPHA: 30,  // Light red tint for passive damage
+  ROCK_TINT_ALPHA: 60,     // Medium red tint for rock collision
+  LAND_TINT_ALPHA: 120,    // Strong red tint for land collision
+  TINT_DURATION: 30,       // How long the tint effect lasts in frames
+  
+  // Screen shake effect
+  ROCK_SHAKE_AMOUNT: 5,    // Small shake for rock collision
+  LAND_SHAKE_AMOUNT: 12,   // Larger shake for land collision
+  SHAKE_DURATION: 20,      // How long the shake effect lasts in frames
+  SHAKE_FALLOFF: 0.85      // How quickly the shake effect decreases (lower = faster)
+};
+
 let boatHealth = BOAT_STATS.STARTING_HEALTH;
 let boatShield = BOAT_STATS.STARTING_SHIELD;
 let passiveDamageCounter = 0;
@@ -90,6 +105,14 @@ function initializeGameplay() {
     lastRockCollision: false
   };
   
+  // Reset damage effects
+  damageEffect = {
+    tintAlpha: 0,
+    tintDuration: 0,
+    shakeAmount: 0,
+    shakeDuration: 0
+  };
+  
   // Reset visual effects
   deathScreenAlpha = 0;
   
@@ -136,10 +159,39 @@ function updateGameplay() {
     purchaseMessageTimer--;
   }
   
+  // Update damage effects
+  updateDamageEffects();
+  
   // Check for death
   if (boatHealth <= 0) {
     gameState = GAME_STATES.DEATH;
     deathScreenAlpha = 0; // Start fade in
+  }
+}
+
+function updateDamageEffects() {
+  // Update tint effect
+  if (damageEffect.tintDuration > 0) {
+    damageEffect.tintDuration--;
+  } else {
+    damageEffect.tintAlpha = 0;
+  }
+  
+  // Update shake effect
+  if (damageEffect.shakeDuration > 0) {
+    damageEffect.shakeDuration--;
+  } else {
+    damageEffect.shakeAmount = 0;
+  }
+  
+  // Apply screen shake decay
+  if (damageEffect.shakeAmount > 0) {
+    damageEffect.shakeAmount *= DAMAGE_EFFECTS.SHAKE_FALLOFF;
+    
+    // Reset to zero if value becomes negligibly small
+    if (damageEffect.shakeAmount < 0.1) {
+      damageEffect.shakeAmount = 0;
+    }
   }
 }
 
@@ -164,6 +216,26 @@ function takeDamage(amount, source) {
   if (remainingDamage > 0) {
     boatHealth -= remainingDamage;
     boatHealth = Math.max(0, boatHealth); // Clamp to 0
+  }
+  
+  // Apply visual damage effects based on source
+  if (source === 'land') {
+    // Strong red tint and large screen shake for land collision
+    damageEffect.tintAlpha = DAMAGE_EFFECTS.LAND_TINT_ALPHA;
+    damageEffect.tintDuration = DAMAGE_EFFECTS.TINT_DURATION;
+    damageEffect.shakeAmount = DAMAGE_EFFECTS.LAND_SHAKE_AMOUNT;
+    damageEffect.shakeDuration = DAMAGE_EFFECTS.SHAKE_DURATION;
+  } else if (source === 'rock') {
+    // Medium red tint and small screen shake for rock collision
+    damageEffect.tintAlpha = DAMAGE_EFFECTS.ROCK_TINT_ALPHA;
+    damageEffect.tintDuration = DAMAGE_EFFECTS.TINT_DURATION;
+    damageEffect.shakeAmount = DAMAGE_EFFECTS.ROCK_SHAKE_AMOUNT;
+    damageEffect.shakeDuration = DAMAGE_EFFECTS.SHAKE_DURATION;
+  } else if (source === 'passive') {
+    // Light red tint but no screen shake for passive damage
+    damageEffect.tintAlpha = DAMAGE_EFFECTS.PASSIVE_TINT_ALPHA;
+    damageEffect.tintDuration = DAMAGE_EFFECTS.TINT_DURATION;
+    // No screen shake for passive damage
   }
   
   //console.log(`Damage taken: ${amount} from ${source}. Health: ${boatHealth}, Shield: ${boatShield}`);
@@ -439,6 +511,34 @@ function drawShop() {
     width: 30,
     height: 30
   };
+}
+
+function drawDamageEffects() {
+  if (gameState !== GAME_STATES.PLAYING) return;
+  
+  // Draw red tint effect when taking damage
+  if (damageEffect.tintAlpha > 0) {
+    // Draw red tint around the edges of the screen
+    noStroke();
+    
+    // Use a gradient from edge to center for a more natural effect
+    const gradientSteps = 20;
+    for (let i = 0; i < gradientSteps; i++) {
+      const ratio = i / gradientSteps;
+      const alpha = damageEffect.tintAlpha * (1 - ratio);
+      
+      if (alpha <= 0) continue;
+      
+      fill(255, 0, 0, alpha);
+      
+      // Draw a frame getting smaller toward the center
+      const frameSize = ratio * 150; // Maximum frame size is 150px
+      rect(0, 0, width, frameSize); // Top
+      rect(0, height - frameSize, width, frameSize); // Bottom
+      rect(0, frameSize, frameSize, height - frameSize * 2); // Left
+      rect(width - frameSize, frameSize, frameSize, height - frameSize * 2); // Right
+    }
+  }
 }
 
 function handleKeyPress() {

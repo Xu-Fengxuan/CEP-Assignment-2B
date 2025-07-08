@@ -353,6 +353,8 @@ class Camera {
     this.y = 0;
     this.targetX = 0;
     this.targetY = 0;
+    this.shakeX = 0;
+    this.shakeY = 0;
   }
 
   follow(target) {
@@ -363,10 +365,19 @@ class Camera {
   update() {
     this.x = lerp(this.x, this.targetX, 0.1);
     this.y = lerp(this.y, this.targetY, 0.1);
+    
+    // Apply screen shake if active
+    if (damageEffect.shakeAmount > 0) {
+      this.shakeX = (Math.random() * 2 - 1) * damageEffect.shakeAmount;
+      this.shakeY = (Math.random() * 2 - 1) * damageEffect.shakeAmount;
+    } else {
+      this.shakeX = 0;
+      this.shakeY = 0;
+    }
   }
 
   apply() {
-    translate(-this.x, -this.y);
+    translate(-this.x + this.shakeX, -this.y + this.shakeY);
   }
 }
 

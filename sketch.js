@@ -172,6 +172,9 @@ function draw() {
   // Draw UI
   drawUI();
   
+  // Draw damage effects (red tint)
+  drawDamageEffects();
+  
   // Draw gameplay UI elements
   drawHealthShieldBars();
   drawBoatStats();
