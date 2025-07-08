@@ -290,7 +290,7 @@ function drawDeathScreen() {
   // Final score
   fill(255, 255, 255, deathScreenAlpha);
   textSize(24);
-  text(`Final Score: ${score}`, width / 2, height / 2);
+  text(`Final Score: ${totalScore}`, width / 2, height / 2);
   
   // Restart instruction
   textSize(20);
