@@ -627,7 +627,7 @@ function drawUI() {
   if (gameState !== GAME_STATES.PLAYING) return;
   
   // Score display (positioned to avoid shop overlap)
-  const coinDisplayX = shopExpanded ? width - shopWidth - 30 : width - shopCollapsedWidth - 30;
+  const coinDisplayX = shopExpanded ? width - shopWidth - 80 : width - shopCollapsedWidth - 80;
   fill(255);
   stroke(0);
   strokeWeight(2);
