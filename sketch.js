@@ -37,6 +37,7 @@ let tileSize = 32;
 let sectionSize = 100;
 let mapSections = {};
 let score = 0;
+let totalScore = 0;
 let spritesLoaded = false;
 
 // Key codes for movement
