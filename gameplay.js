@@ -372,7 +372,7 @@ function drawBoatStats() {
 function drawShop() {
   if (gameState !== GAME_STATES.PLAYING) return;
   
-  const shopX = shopExpanded ? width - shopWidth - 70 : width - shopCollapsedWidth - 70;
+  const shopX = shopExpanded ? width - shopWidth : width - shopCollapsedWidth;
   const shopY = 0;
   const shopHeight = height;
   
