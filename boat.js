@@ -5,7 +5,7 @@ class Boat {
     this.direction = 0; // Current visual direction
     this.targetDirection = 0; // Target direction to smoothly transition to
     this.directionSpeed = 0.3; // How fast direction changes (0.1 = slow, 1.0 = instant)
-    this.speed = 3;
+    this.speed = 6;
     this.radius = 16; // Collision radius (half of 32px sprite diameter)
   }
 
