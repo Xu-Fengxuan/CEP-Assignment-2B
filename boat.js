@@ -6,7 +6,7 @@ class Boat {
     this.targetDirection = 0; // Target direction to smoothly transition to
     this.directionSpeed = 0.3; // How fast direction changes (0.1 = slow, 1.0 = instant)
     this.speed = 3;
-    this.radius = 16; // Changed from size to radius (half of 32px sprite diameter)
+    this.radius = 16; // Collision radius (half of 32px sprite diameter)
   }
 
   update() {
@@ -107,7 +107,6 @@ class Boat {
     if (this.isCollidingWithLand(targetX, targetY) && !damageImmunity.lastLandCollision) {
       takeDamage(BOAT_STATS.LAND_DAMAGE, 'land');
       damageImmunity.lastLandCollision = true;
-      //console.log("Land collision damage taken!");
     }
     
     // If full movement is blocked, try sliding along walls
@@ -277,8 +276,7 @@ class Boat {
     const directions = 16; // 16 boat sprites
     const angleStep = (Math.PI * 2) / directions;
     
-    // ship1 is forward (up/north), sprites rotate anticlockwise as number increases
-    // Adjust angle so that -90 degrees (up) corresponds to ship1
+    // Map angle to sprite directions
     // Convert from standard math angle to our sprite system
     let adjustedAngle = angle + Math.PI/2; // Rotate by 90 degrees to make up = 0
     
@@ -350,19 +348,15 @@ class Boat {
   checkDamageCollisions() {
     const currentRockCollision = this.isCollidingWithRockCenter();
     
-    //console.log(`Damage check - Rock: ${currentRockCollision}, LastRock: ${damageImmunity.lastRockCollision}`);
-    
     // Rock damage logic - only take damage when starting to collide  
     if (currentRockCollision && !damageImmunity.lastRockCollision) {
       takeDamage(BOAT_STATS.ROCK_DAMAGE, 'rock');
       damageImmunity.lastRockCollision = true;
-      //console.log("Rock collision damage taken!");
     }
     
     // Reset rock immunity only when no longer colliding with rocks
     if (!currentRockCollision && damageImmunity.lastRockCollision) {
       damageImmunity.lastRockCollision = false;
-      //console.log("Rock immunity reset - no longer colliding");
     }
     
     // Note: Land immunity is handled in moveWithSliding() since land damage
@@ -450,13 +444,13 @@ class Boat {
       const spriteSize = 32; // Scale up the 16x16 sprite
       image(boatSprites[validDirection], 0, 0, spriteSize, spriteSize);
       
-      // Debug: Draw collision circle (uncomment to visualize)
+      // Collision visualization (uncomment for debugging)
       // stroke(255, 0, 0, 100);
       // strokeWeight(1);
       // noFill();
       // ellipse(0, 0, this.radius * 2, this.radius * 2);
       
-      // Debug: Draw colliders (uncomment to visualize)
+      // Collision areas visualization (uncomment for debugging)
       // this.debugDrawColliders();
     } else {
       // Fallback to simple drawing if sprites not loaded

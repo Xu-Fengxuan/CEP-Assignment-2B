@@ -237,8 +237,6 @@ function takeDamage(amount, source) {
     damageEffect.tintDuration = DAMAGE_EFFECTS.TINT_DURATION;
     // No screen shake for passive damage
   }
-  
-  //console.log(`Damage taken: ${amount} from ${source}. Health: ${boatHealth}, Shield: ${boatShield}`);
 }
 
 function drawStartScreen() {
@@ -374,7 +372,7 @@ function drawBoatStats() {
 function drawShop() {
   if (gameState !== GAME_STATES.PLAYING) return;
   
-  const shopX = shopExpanded ? width - shopWidth : width - shopCollapsedWidth;
+  const shopX = shopExpanded ? width - shopWidth - 70 : width - shopCollapsedWidth - 70;
   const shopY = 0;
   const shopHeight = height;
   
@@ -521,22 +519,22 @@ function drawDamageEffects() {
     // Draw red tint around the edges of the screen
     noStroke();
     
-    // Use a gradient from edge to center for a more natural effect
+    // Use a gradient from edge to center for a more natural vignette effect
     const gradientSteps = 10;
     for (let i = 0; i < gradientSteps; i++) {
       const ratio = i / gradientSteps;
-      const alpha = damageEffect.tintAlpha * (1 - ratio);
+      const alpha = damageEffect.tintAlpha * (1 - ratio); // Decrease alpha as we move toward center
       
       if (alpha <= 0) continue;
       
       fill(255, 0, 0, alpha);
       
-      // Draw a frame getting smaller toward the center
-      const frameSize = ratio * 40; // Maximum frame size is 150px
-      rect(0, 0, width, frameSize); // Top
-      rect(0, height - frameSize, width, frameSize); // Bottom
-      rect(0, frameSize, frameSize, height - frameSize * 2); // Left
-      rect(width - frameSize, frameSize, frameSize, height - frameSize * 2); // Right
+      // Draw a frame of rectangles that gets smaller toward the center
+      const frameSize = ratio * 40; // Size of frame based on gradient position
+      rect(0, 0, width, frameSize); // Top rectangle
+      rect(0, height - frameSize, width, frameSize); // Bottom rectangle
+      rect(0, frameSize, frameSize, height - frameSize * 2); // Left rectangle
+      rect(width - frameSize, frameSize, frameSize, height - frameSize * 2); // Right rectangle
     }
   }
 }

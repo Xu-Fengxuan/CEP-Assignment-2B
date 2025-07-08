@@ -227,7 +227,7 @@ function getTileFromSheet(index) {
   // Bounds check
   if (index < 0 || index > maxTileIndex) {
     console.warn(`Tile index ${index} is out of bounds (0-${maxTileIndex}). Using water tile instead.`);
-    index = 171; // Fallback to water tile index (changed from 170)
+    index = 171; // Fallback to water tile index
     
     // If even the fallback is out of bounds, use index 0
     if (index > maxTileIndex) {
@@ -237,8 +237,6 @@ function getTileFromSheet(index) {
   
   const tileX = (index % tilesPerRow) * tilePixelSize;
   const tileY = Math.floor(index / tilesPerRow) * tilePixelSize;
-  
-  // Removed excessive debug logging for water tiles
   
   return spriteSheet.get(tileX, tileY, tilePixelSize, tilePixelSize);
 }
@@ -270,7 +268,7 @@ function drawTile(x, y, tileType) {
     
     switch(tileType) {
       case TILES.WATER:
-        tileIndex = 171; // Changed from 170 to 171
+        tileIndex = 171; // Water tile index
         break;
       case TILES.ROCK:
         tileIndex = 48;
@@ -296,8 +294,8 @@ function drawTile(x, y, tileType) {
         overlayIndex = 69; // Original tile as overlay
         break;
       case TILES.LAND_RIGHT_MIDDLE:
-        tileIndex = 67; // New tile index (71) - 4
-        overlayIndex = 71; // Changed from 29 to 71
+        tileIndex = 67; // Tile index without overlay
+        overlayIndex = 71; // Overlay tile index
         break;
       case TILES.LAND_BOTTOM_LEFT:
         tileIndex = 47;
@@ -312,7 +310,7 @@ function drawTile(x, y, tileType) {
         overlayIndex = 11;
         break;
       default:
-        tileIndex = 171; // Default to water (changed from 170)
+        tileIndex = 171; // Default to water tile
     }
     
     // Draw main tile
@@ -338,7 +336,7 @@ function drawTile(x, y, tileType) {
     drawFallbackTile(tileType);
   }
   
-  // Add debug text showing tile name
+  // Commented code below can be uncommented for debugging tile types
   // fill(255, 255, 255);
   // stroke(0);
   // strokeWeight(1);

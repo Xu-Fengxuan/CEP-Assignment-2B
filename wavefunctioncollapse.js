@@ -3,7 +3,7 @@ const TILE_RULES = {
   [TILES.WATER]: {
     up: [TILES.WATER, TILES.ROCK, TILES.LAND_BOTTOM_LEFT, TILES.LAND_BOTTOM_MIDDLE, TILES.LAND_BOTTOM_RIGHT],
     right: [TILES.WATER, TILES.ROCK, TILES.LAND_TOP_LEFT, TILES.LAND_LEFT_MIDDLE, TILES.LAND_BOTTOM_LEFT],
-    down: [TILES.WATER, TILES.ROCK], // Removed all top land tiles - they cannot be below water
+    down: [TILES.WATER, TILES.ROCK], // Water can only have water or rock below it (no land)
     left: [TILES.WATER, TILES.ROCK, TILES.LAND_TOP_RIGHT, TILES.LAND_RIGHT_MIDDLE, TILES.LAND_BOTTOM_RIGHT]
   },
   [TILES.ROCK]: {
@@ -368,6 +368,8 @@ class Camera {
     
     // Apply screen shake if active
     if (damageEffect.shakeAmount > 0) {
+      // Generate random offset values based on shake amount
+      // Math.random() * 2 - 1 generates values between -1 and 1
       this.shakeX = (Math.random() * 2 - 1) * damageEffect.shakeAmount;
       this.shakeY = (Math.random() * 2 - 1) * damageEffect.shakeAmount;
     } else {
@@ -377,6 +379,7 @@ class Camera {
   }
 
   apply() {
+    // Apply camera transform with shake offset for damage effects
     translate(-this.x + this.shakeX, -this.y + this.shakeY);
   }
 }
