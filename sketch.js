@@ -632,7 +632,7 @@ function drawUI() {
   stroke(0);
   strokeWeight(2);
   textSize(24);
-  textAlign(LEFT);
+  textAlign(RIGHT);
   text(`Coins: ${score}`, coinDisplayX, 30);
   
   // Instructions at bottom
