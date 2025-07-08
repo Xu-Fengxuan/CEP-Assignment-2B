@@ -22,16 +22,16 @@ const BOAT_STATS = {
 // Damage effect parameters
 const DAMAGE_EFFECTS = {
   // Red tint effect
-  PASSIVE_TINT_ALPHA: 5,  // Light red tint for passive damage
-  ROCK_TINT_ALPHA: 10,     // Medium red tint for rock collision
-  LAND_TINT_ALPHA: 15,    // Strong red tint for land collision
-  TINT_DURATION: 5,       // How long the tint effect lasts in frames
+  PASSIVE_TINT_ALPHA: 3,  // Light red tint for passive damage
+  ROCK_TINT_ALPHA: 7,     // Medium red tint for rock collision
+  LAND_TINT_ALPHA: 10,    // Strong red tint for land collision
+  TINT_DURATION: 4,       // How long the tint effect lasts in frames
   
   // Screen shake effect
   ROCK_SHAKE_AMOUNT: 2,    // Small shake for rock collision
-  LAND_SHAKE_AMOUNT: 5,   // Larger shake for land collision
+  LAND_SHAKE_AMOUNT: 3,   // Larger shake for land collision
   SHAKE_DURATION: 4,      // How long the shake effect lasts in frames
-  SHAKE_FALLOFF: 0.75      // How quickly the shake effect decreases (lower = faster)
+  SHAKE_FALLOFF: 0.7      // How quickly the shake effect decreases (lower = faster)
 };
 
 let boatHealth = BOAT_STATS.STARTING_HEALTH;
