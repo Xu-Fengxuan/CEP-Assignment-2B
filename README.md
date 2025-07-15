@@ -47,6 +47,6 @@ An interactive ocean map generator using Wave Function Collapse algorithm with b
 
 ## Credits
 
-Created as part of Creative Embedded Programming (CEP) Assignment 2B.
+Created as part of Computing Elective Programme (CEP) Assignment 2B.
 
 Sprites and game assets based on public domain resources.

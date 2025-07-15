@@ -1,0 +1,229 @@
+================================================================================
+                    WA2B - Ocean Map Generator Reflection & Progress Log
+================================================================================
+
+INTRODUCTION
+============
+
+This project is an interactive ocean map generator built using p5.js and the Wave Function Collapse algorithm. The core concept revolves around creating an infinite, procedurally generated ocean world with islands, rocks, and navigable water where players can control a boat with smooth sprite animations. The project demonstrates advanced procedural generation techniques combined with real-time game mechanics.
+
+The application features a dynamic tile-based world generation system that creates coherent coastlines and island formations using strict adjacency rules. Players navigate through this world using a boat that responds to WASD/arrow key controls, with the camera smoothly following the player's movement. The world generates new sections dynamically as the player explores, creating a truly infinite ocean experience.
+
+CODE EXPLANATION
+================
+
+Core Architecture:
+------------------
+The project is structured into several key components:
+
+1. **Main Sketch (sketch.js)**
+   - Handles p5.js setup, draw loop, and rendering
+   - Manages camera system and UI display
+   - Coordinates between different game systems
+   - Implements sprite loading and tile rendering
+
+2. **Boat System (boat.js)**
+   - Implements boat movement with smooth controls
+   - Handles collision detection using circle-rectangle algorithms
+   - Manages 16-directional sprite animation
+   - Triggers dynamic section generation based on boat position
+
+3. **Wave Function Collapse (wavefunctioncollapse.js)**
+   - Implements the core procedural generation algorithm
+   - Manages tile adjacency rules and constraints
+   - Handles sectioned world generation for infinite maps
+   - Provides edge constraint system for seamless section transitions
+
+Technical Implementation Details:
+---------------------------------
+
+**Wave Function Collapse Algorithm:**
+The system uses a constraint-based approach where each tile has defined adjacency rules. The algorithm:
+- Initializes a grid with all possible tiles for each cell
+- Iteratively collapses cells with minimum entropy (fewest possibilities)
+- Propagates constraints to neighboring cells
+- Uses weighted selection to favor water over land for ocean-like terrain
+
+**Sectioned World Generation:**
+The infinite world is divided into 100x100 tile sections that generate dynamically:
+- New sections are created when the boat approaches ungenerated areas
+- Each section maintains its own 2D array of tiles
+- Global coordinate system translates between world and section coordinates
+
+**Edge Constraint System:**
+To maintain continuity between sections:
+- Adjacent sections share edge tiles to ensure seamless transitions
+- Edge constraints are applied before Wave Function Collapse runs
+- Special handling for the starting section (0,0) to ensure varied terrain
+
+**Sprite System:**
+- Uses a comprehensive spritesheet for terrain tiles
+- Implements 16-directional boat sprites for smooth rotation
+- Overlay system for complex land tile compositions
+- Animated wave effects around coastlines
+
+**Collision Detection:**
+- Circle-rectangle collision for boat-land interaction
+- Sliding collision response for smooth movement along edges
+- Precise collision areas for different land tile types
+
+AREAS FOR IMPROVEMENT
+=====================
+
+1. **Wave Function Collapse Constraints:**
+   The current constraint system is sometimes too restrictive, leading to generation failures where only water tiles are produced. This occurs particularly when edge constraints from adjacent sections create impossible scenarios for the algorithm to resolve.
+
+   Potential Solutions:
+   - Implement backtracking to recover from impossible states
+   - Add constraint relaxation when no valid tiles remain
+   - Develop adaptive constraint weights based on generation context
+
+2. **Land Mass Continuity:**
+   Some land formations are artificially cut off at section boundaries due to overly strict edge constraint application. This breaks the natural flow of island shapes across sections.
+
+   Potential Solutions:
+   - Implement lookahead generation to preview adjacent sections
+   - Add probabilistic edge matching instead of strict constraints
+   - Develop a global land mass planning system
+
+3. **Incomplete Land Formations:**
+   Certain land masses spawn without proper edge tiles, creating visually inconsistent coastlines where land tiles appear to float or have incorrect adjacencies.
+
+   Potential Solutions:
+   - Add post-processing validation and correction
+   - Implement multi-pass generation for complex land formations
+   - Develop specialized rules for coastal tile placement
+
+4. **Performance Optimization:**
+   The current system regenerates constraints for every section, which could be optimized for better performance with larger worlds.
+
+   Potential Solutions:
+   - Implement constraint caching systems
+   - Add level-of-detail for distant sections
+   - Optimize tile rule lookup with hash tables
+
+5. **Visual Polish:**
+   While the spritesheet implementation is functional, the visual presentation could be enhanced with more sophisticated rendering techniques.
+
+   Potential Solutions:
+   - Add particle effects for water movement
+   - Implement dynamic lighting and shadows
+   - Add weather effects and day/night cycles
+
+ASPECTS I'M PROUD OF
+=====================
+
+**Spritesheet Implementation:**
+The integration of sprite-based rendering significantly elevates the visual quality of the game. The system successfully handles:
+- Complex tile compositions with base tiles and overlays
+- Smooth 16-directional boat animation
+- Proper sprite indexing and rendering
+- Fallback systems for missing sprites
+
+This implementation transforms the project from simple colored rectangles to a visually appealing game with professional-looking textures and animations.
+
+**Procedural Generation System:**
+The Wave Function Collapse implementation creates genuinely interesting and varied terrain that feels natural and organic. Key achievements include:
+- Coherent coastline generation with proper tile adjacencies
+- Infinite world generation that maintains performance
+- Dynamic section loading that creates seamless exploration
+- Balanced terrain generation with appropriate water/land ratios
+
+The system successfully creates an immersive ocean world where players can explore indefinitely, with each new area feeling fresh and unique while maintaining visual consistency.
+
+**Technical Architecture:**
+The modular code structure demonstrates good software engineering practices:
+- Clear separation of concerns between different systems
+- Scalable architecture that can handle infinite world generation
+- Robust error handling and fallback mechanisms
+- Efficient coordinate system management for global/local transformations
+
+PROGRESS LOG
+============
+
+**Initial Development Phase (Commits 1-15)**
+- 2708e95: Initial commit - Project setup
+- 1def7cf: Initial commit - Basic structure established
+- 6efec9d: Update procedural generation, boat controls and speed
+- ba912d0: Basic functionality implementation
+- ecce4f3: Major rewrite to implement Wave Function Collapse with spritesheet system
+
+**Core System Implementation (Commits 16-30)**
+- 3a9a157: Add spritesheets - Foundation for visual improvement
+- e6a7924: Use sprites - Integration of sprite rendering system
+- 14423de: Fix error - Debugging and stability improvements
+- f7e4c54: Fix bug - Ensure valid tile selection logic
+- 7737eaa: Add tile debug - Development tools for troubleshooting
+- 0ae6578: Refine wave function collapse - Algorithm improvements
+- e7c63a3: Update wave function collapse logic - Core system refinement
+
+**Visual Enhancement Phase (Commits 31-45)**
+- 832e199: Added base tile to all land tiles - Visual consistency
+- 0068e84: Added wave effect around tiles - Animated visual effects
+- 9c58f0f: Fix PI constant scope bug - Technical debugging
+- 5add181: Remove excessive debugging output - Code cleanup
+- c458420: Overlay rock below grass, correct tile indexing
+- c2c6fb5: Updated diagonal wave code, fixed boat sprite directions
+- b47b634: Fixed flipped boat sprite motion direction
+
+**Gameplay Systems (Commits 46-60)**
+- b1d9c68: Update collision detection to use circle-based algorithms
+- 264de0e: Reduce rock frequency, increase boat speed - Balance adjustments
+- 6e3fc2b: Split code into different files - Code organization
+- 8d76719: Fix indentation - Code maintenance
+- 80eb2c5: Add gameplay features - Health, shields, coin shop, UI systems
+- c65a505: Update shop costs - Game balance
+- 2d2c34e: Changed collision to use circle-rectangle detection
+
+**System Refinement (Commits 61-75)**
+- 1fdcac3: Fixed damage handling for land tiles
+- 305e18e: Fixed damage immunity reset logic
+- efb234b: Update start and end screens with better interaction
+- 981455b: Commented out debug logging code
+- 9a7ed96: Refine UI - User interface improvements
+- 292d62a: Add frame rate to UI - Performance monitoring
+- 0f2476c: Added damage effects - Screen shake and visual feedback
+
+**Polish and Documentation (Commits 76-90)**
+- eb79a90: Updated README.md with comprehensive documentation
+- a14fa1b: Update damage effects - Visual polish
+- 13fd6e5: Changed coin amount text positioning
+- bcd1fd5: Update coin UI position - Interface refinement
+- 00cf4cf: Fix coin text positioning
+- 9ffe041: Update death screen - User experience improvement
+- f53349a: Update death screen - Continued UX refinement
+
+**Final Adjustments (Commits 91-95)**
+- 9ff2f2b: Replace game screenshot - Documentation update
+- 0f9ca85: Delete old game screenshot - File cleanup
+- bd125f3: Increase boat speed from 3 to 6 - Final balance adjustment
+- b369986: Make speed booster increase speed by 2 instead of 1
+- 929e5d0: Revert changes - Final state management
+
+TECHNICAL CHALLENGES OVERCOME
+==============================
+
+1. **Sprite System Integration:** Successfully implemented a complex sprite rendering system that handles multiple tile types with overlays and animations.
+
+2. **Infinite World Generation:** Developed a sectioned approach to world generation that maintains performance while providing truly infinite exploration.
+
+3. **Collision Detection:** Implemented sophisticated circle-rectangle collision detection that provides smooth, realistic boat movement.
+
+4. **Coordinate System Management:** Created a robust global-to-local coordinate transformation system for seamless world navigation.
+
+5. **Wave Function Collapse Implementation:** Built a working constraint-based procedural generation system that creates coherent, natural-looking terrain.
+
+CONCLUSION
+==========
+
+This project successfully demonstrates advanced procedural generation techniques combined with real-time game mechanics. While there are areas for improvement, particularly in the constraint system and land mass continuity, the core achievements in spritesheet implementation and procedural generation create a compelling and immersive ocean exploration experience.
+
+The project showcases technical proficiency in algorithm implementation, system architecture, and game development principles. The infinite world generation system provides a solid foundation for future enhancements and demonstrates the potential for creating large-scale procedural game worlds.
+
+The combination of Wave Function Collapse with sprite-based rendering creates a unique and engaging experience that balances technical complexity with visual appeal and gameplay polish.
+
+================================================================================
+Date: July 15, 2025
+Project: CEP Assignment 2B - Ocean Map Generator
+Author: Xu-Fengxuan
+================================================================================
