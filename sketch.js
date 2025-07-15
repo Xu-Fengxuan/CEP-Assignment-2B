@@ -30,14 +30,11 @@ const BOAT_DIRECTIONS = {
 let gameMap;
 let boat;
 let camera;
-let coins;
 let spriteSheet;
 let boatSprites = [];
 let tileSize = 32;
 let sectionSize = 100;
 let mapSections = {};
-let score = 0;
-let totalScore = 0;
 let spritesLoaded = false;
 
 // Key codes for movement
@@ -69,7 +66,6 @@ function setup() {
   // Initialize game objects
   boat = new Boat(400, 300);
   camera = new Camera();
-  coins = [];
   
   // Sprites should be loaded by now since preload() runs first
   spritesLoaded = spriteSheet && spriteSheet.width > 0 && boatSprites && boatSprites.length === 16;
@@ -98,60 +94,15 @@ function setup() {
   
   // Report on initial map generation quality
   validateInitialMapGeneration();
-  
-  // Initialize gameplay system after map generation
-  initializeGameplay();
-  gameInitialized = true;
 }
 
 function draw() {
   background(0x30, 0x4c, 0xc4); // HEX #304cc4
   
-  // Handle different game states
-  if (gameState === GAME_STATES.START) {
-    // Still show the game world being generated
-    if (gameInitialized) {
-      // Apply camera transform
-      push();
-      camera.apply();
-      
-      // Draw map
-      drawMap();
-      
-      // Draw coins
-      for (const coin of coins) {
-        coin.draw();
-      }
-      
-      // Draw boat
-      boat.draw();
-      
-      pop();
-      
-      // Draw start screen overlay
-      drawStartScreen();
-    }
-    return;
-  }
-  
-  if (gameState === GAME_STATES.PLAYING) {
-    // Update game objects
-    boat.update();
-    camera.follow(boat);
-    camera.update();
-    
-    // Update coins
-    for (const coin of coins) {
-      coin.update();
-    }
-    
-    // Update gameplay mechanics
-    updateGameplay();
-  } else {
-    // Still update camera to follow boat even in non-playing states for visual consistency
-    camera.follow(boat);
-    camera.update();
-  }
+  // Update game objects
+  boat.update();
+  camera.follow(boat);
+  camera.update();
   
   // Apply camera transform
   push();
@@ -160,31 +111,31 @@ function draw() {
   // Draw map
   drawMap();
   
-  // Draw coins
-  for (const coin of coins) {
-    coin.draw();
-  }
-  
   // Draw boat
   boat.draw();
   
   pop();
   
-  // Draw UI
-  drawUI();
+  // Draw UI elements (not affected by camera)
+  drawBoatInfo();
+}
+
+function drawBoatInfo() {
+  // Calculate boat's tile position
+  const boatTileX = Math.floor(boat.x / tileSize);
+  const boatTileY = Math.floor(boat.y / tileSize);
   
-  // Draw damage effects (red tint)
-  drawDamageEffects();
+  // Calculate section coordinates
+  const sectionX = Math.floor(boatTileX / sectionSize);
+  const sectionY = Math.floor(boatTileY / sectionSize);
   
-  // Draw gameplay UI elements
-  drawHealthShieldBars();
-  drawBoatStats();
-  drawShop();
+  // Display boat position information
+  fill(0, 0, 0); // Black text
+  textAlign(LEFT, TOP);
+  textSize(16);
   
-  // Draw death screen if needed
-  if (gameState === GAME_STATES.DEATH) {
-    drawDeathScreen();
-  }
+  text(`Boat Position: (${boatTileX}, ${boatTileY})`, 10, 10);
+  text(`Section: (${sectionX}, ${sectionY})`, 10, 30);
 }
 
 function drawMap() {
@@ -624,26 +575,6 @@ function drawCornerWaves(time, directions) {
   pop();
 }
 
-function drawUI() {
-  if (gameState !== GAME_STATES.PLAYING) return;
-  
-  // Score display (positioned to avoid shop overlap)
-  const coinDisplayX = shopExpanded ? width - shopWidth - 20 : width - shopCollapsedWidth - 20;
-  fill(255);
-  stroke(0);
-  strokeWeight(2);
-  textSize(24);
-  textAlign(RIGHT);
-  text(`Coins: ${score}`, coinDisplayX, 30);
-  
-  // Instructions at bottom
-  textSize(16);
-  textAlign(LEFT);
-  text("Use WASD or Arrow Keys to move", 20, height - 60);
-  text("Collect gold coins!", 20, height - 40);
-  text("Avoid land and rocks!", 20, height - 20);
-}
-
 // Add debug function to visualize collision areas (optional - uncomment in drawMap to use)
 function drawTileCollisionDebug(x, y, tileType) {
   if (!isLandTile(tileType)) return;
@@ -703,26 +634,4 @@ function drawTileCollisionDebug(x, y, tileType) {
   }
   
   pop();
-}
-
-// Handle key press events for game state management
-function keyPressed() {
-  handleKeyPress();
-  return false; // Prevent default behavior
-}
-
-// Handle mouse clicks for shop interaction and game start
-function mousePressed() {
-  // Handle game start when clicking in start or death state
-  if (gameState === GAME_STATES.START || gameState === GAME_STATES.DEATH) {
-    handleKeyPress(); // Reuse the existing key press logic
-    return false;
-  }
-  
-  // Handle shop clicks during gameplay
-  if (gameState === GAME_STATES.PLAYING) {
-    handleShopClick(mouseX, mouseY);
-  }
-  
-  return false; // Prevent default behavior
 }

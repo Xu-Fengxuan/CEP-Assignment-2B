@@ -353,8 +353,6 @@ class Camera {
     this.y = 0;
     this.targetX = 0;
     this.targetY = 0;
-    this.shakeX = 0;
-    this.shakeY = 0;
   }
 
   follow(target) {
@@ -365,51 +363,11 @@ class Camera {
   update() {
     this.x = lerp(this.x, this.targetX, 0.1);
     this.y = lerp(this.y, this.targetY, 0.1);
-    
-    // Apply screen shake if active
-    if (damageEffect.shakeAmount > 0) {
-      // Generate random offset values based on shake amount
-      // Math.random() * 2 - 1 generates values between -1 and 1
-      this.shakeX = (Math.random() * 2 - 1) * damageEffect.shakeAmount;
-      this.shakeY = (Math.random() * 2 - 1) * damageEffect.shakeAmount;
-    } else {
-      this.shakeX = 0;
-      this.shakeY = 0;
-    }
   }
 
   apply() {
-    // Apply camera transform with shake offset for damage effects
-    translate(-this.x + this.shakeX, -this.y + this.shakeY);
-  }
-}
-
-class Coin {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.size = 8;
-    this.rotation = 0;
-  }
-
-  update() {
-    this.rotation += 0.1;
-  }
-
-  draw() {
-    push();
-    translate(this.x, this.y);
-    rotate(this.rotation);
-    
-    fill(255, 215, 0);
-    stroke(218, 165, 32);
-    strokeWeight(2);
-    ellipse(0, 0, this.size, this.size);
-    
-    fill(255, 255, 0);
-    ellipse(0, 0, this.size * 0.6, this.size * 0.6);
-    
-    pop();
+    // Apply camera transform
+    translate(-this.x, -this.y);
   }
 }
 
@@ -423,24 +381,6 @@ function generateSection(sectionX, sectionY) {
 
   // Validate and fix the generated section
   validateAndFixSection(sectionX, sectionY);
-
-  // Generate coins on water tiles
-  generateCoinsForSection(sectionX, sectionY);
-}
-
-function generateCoinsForSection(sectionX, sectionY) {
-  const sectionKey = `${sectionX},${sectionY}`;
-  const sectionData = mapSections[sectionKey];
-  
-  for (let y = 0; y < sectionSize; y++) {
-    for (let x = 0; x < sectionSize; x++) {
-      if (sectionData[y][x] === TILES.WATER && Math.random() < 0.01) {
-        const worldX = (sectionX * sectionSize + x) * tileSize + tileSize / 2;
-        const worldY = (sectionY * sectionSize + y) * tileSize + tileSize / 2;
-        coins.push(new Coin(worldX, worldY));
-      }
-    }
-  }
 }
 
 // Add debug function to visualize collision areas (optional - uncomment in drawMap to use)

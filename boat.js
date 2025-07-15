@@ -10,9 +10,6 @@ class Boat {
   }
 
   update() {
-    // Only update if game is in playing state
-    if (gameState !== GAME_STATES.PLAYING) return;
-    
     // Handle movement input using keyIsDown for better multi-key support
     // Use !! to coerce to boolean in case keyIsDown returns undefined when canvas is out of focus
     const moveUp = !!keyIsDown(KEY_CODES.W) || !!keyIsDown(KEY_CODES.UP);
@@ -49,12 +46,6 @@ class Boat {
 
     // Check collision with land tiles and implement sliding
     this.moveWithSliding(newX, newY, moveX, moveY);
-
-    // Check for coin collection
-    this.collectCoins();
-
-    // Check for damage-causing collisions
-    this.checkDamageCollisions();
 
     // Generate new sections if needed
     this.checkSectionGeneration();
@@ -96,17 +87,7 @@ class Boat {
     if (this.canMoveTo(targetX, targetY)) {
       this.x = targetX;
       this.y = targetY;
-      // Reset land immunity only when we can move freely to our intended target
-      // This means we're no longer blocked by land
-      damageImmunity.lastLandCollision = false;
       return;
-    }
-    
-    // If we can't move to target position, check if it's because of land collision
-    // and apply damage if so
-    if (this.isCollidingWithLand(targetX, targetY) && !damageImmunity.lastLandCollision) {
-      takeDamage(BOAT_STATS.LAND_DAMAGE, 'land');
-      damageImmunity.lastLandCollision = true;
     }
     
     // If full movement is blocked, try sliding along walls
@@ -132,7 +113,6 @@ class Boat {
       this.y = verticalY;
     }
     // If neither direction is possible, boat stays in place
-    // Don't reset immunity here - only reset when we can move to our intended target
   }
 
   canMoveTo(x, y) {
@@ -295,20 +275,6 @@ class Boat {
     return directionIndex;
   }
 
-  collectCoins() {
-    for (let i = coins.length - 1; i >= 0; i--) {
-      const coin = coins[i];
-      const distance = Math.sqrt((this.x - coin.x) ** 2 + (this.y - coin.y) ** 2);
-      
-      // Use radius instead of size for collision
-      if (distance < this.radius) {
-        coins.splice(i, 1);
-        score += 10;
-        totalScore += 10;
-      }
-    }
-  }
-
   checkSectionGeneration() {
     const currentSectionX = Math.floor(this.x / (tileSize * sectionSize));
     const currentSectionY = Math.floor(this.y / (tileSize * sectionSize));
@@ -346,24 +312,6 @@ class Boat {
     }
   }
 
-  checkDamageCollisions() {
-    const currentRockCollision = this.isCollidingWithRockCenter();
-    
-    // Rock damage logic - only take damage when starting to collide  
-    if (currentRockCollision && !damageImmunity.lastRockCollision) {
-      takeDamage(BOAT_STATS.ROCK_DAMAGE, 'rock');
-      damageImmunity.lastRockCollision = true;
-    }
-    
-    // Reset rock immunity only when no longer colliding with rocks
-    if (!currentRockCollision && damageImmunity.lastRockCollision) {
-      damageImmunity.lastRockCollision = false;
-    }
-    
-    // Note: Land immunity is handled in moveWithSliding() since land damage
-    // is triggered by movement attempts, not just position-based collision
-  }
-
   isCollidingWithLand(x, y) {
     // Get all nearby tiles to check collision against
     const boatCircle = { x: x, y: y, radius: this.radius };
@@ -384,44 +332,6 @@ class Boat {
         if (isLandTile(tile)) {
           const collider = this.getLandTileCollider(tileX, tileY, tile);
           if (collider && this.circleRectangleCollision(boatCircle, collider)) {
-            return true;
-          }
-        }
-      }
-    }
-    
-    return false;
-  }
-
-  isCollidingWithRockCenter() {
-    // Check collision with rock center (8 pixel radius from center)
-    const boatCircle = { x: this.x, y: this.y, radius: this.radius };
-    
-    // Calculate the range of tiles to check
-    const buffer = this.radius + tileSize;
-    const minTileX = Math.floor((this.x - buffer) / tileSize);
-    const maxTileX = Math.ceil((this.x + buffer) / tileSize);
-    const minTileY = Math.floor((this.y - buffer) / tileSize);
-    const maxTileY = Math.ceil((this.y + buffer) / tileSize);
-    
-    // Loop through all tiles in the range
-    for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
-      for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
-        const tile = this.getTileAt(tileX, tileY);
-        
-        if (tile === TILES.ROCK) {
-          // Create a circular collider for the center 6 pixels of the rock
-          const rockCenterX = tileX * tileSize + tileSize / 2;
-          const rockCenterY = tileY * tileSize + tileSize / 2;
-          const rockCenterRadius = 6;
-          
-          // Check circle-to-circle collision
-          const distance = Math.sqrt(
-            (this.x - rockCenterX) ** 2 + 
-            (this.y - rockCenterY) ** 2
-          );
-          
-          if (distance < (this.radius + rockCenterRadius)) {
             return true;
           }
         }
@@ -494,19 +404,6 @@ class Boat {
             rect(collider.x, collider.y, collider.width, collider.height);
             pop();
           }
-        }
-        
-        if (tile === TILES.ROCK) {
-          // Draw rock center collision area
-          const rockCenterX = tileX * tileSize + tileSize / 2;
-          const rockCenterY = tileY * tileSize + tileSize / 2;
-          push();
-          translate(-this.x, -this.y); // Undo boat translation
-          stroke(0, 255, 255, 150);
-          strokeWeight(2);
-          noFill();
-          ellipse(rockCenterX, rockCenterY, 16, 16); // 8 pixel radius = 16 diameter
-          pop();
         }
       }
     }
