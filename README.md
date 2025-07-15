@@ -2,8 +2,6 @@
 
 An interactive ocean map generator using Wave Function Collapse algorithm with boat navigation. This project demonstrates procedural generation of ocean maps with islands, rocks, and water, featuring a controllable boat with sprite animations.
 
-![Game Screenshot](game_screenshot.jpeg)
-
 ## Features
 
 - **Procedural Ocean Generation**: Uses Wave Function Collapse algorithm to generate infinite ocean maps
